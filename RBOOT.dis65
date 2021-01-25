@@ -1,0 +1,513 @@
+﻿### 6502bench SourceGen dis65 v1.0 ###
+{
+"_ContentVersion":4,
+"FileDataLength":432,
+"FileDataCrc32":2011475511,
+"ProjectProps":{
+"CpuName":"65C02",
+"IncludeUndocumentedInstr":false,
+"TwoByteBrk":false,
+"EntryFlags":32702671,
+"AutoLabelStyle":"Simple",
+"AnalysisParams":{
+"AnalyzeUncategorizedData":true,
+"DefaultTextScanMode":"LowHighAscii",
+"MinCharsForString":4,
+"SeekNearbyTargets":true,
+"UseRelocData":false,
+"SmartPlpHandling":false,
+"SmartPlbHandling":true},
+
+"PlatformSymbolFileIdentifiers":["RT:Apple/F8-ROM.sym65",
+"RT:Apple/Cxxx-IO.sym65",
+"RT:Apple/C08x-DiskII.sym65",
+"RT:Apple/DOS33.sym65",
+"RT:Apple/Applesoft.sym65"],
+"ExtensionScriptFileIdentifiers":["RT:Apple/ProDOS8.cs",
+"RT:Apple/VisHiRes.cs"],
+"ProjectSyms":{
+"BAS_ERRNUM":{
+"DataDescriptor":{
+"Length":1,
+"Format":"NumericLE",
+"SubFormat":"Hex",
+"SymbolRef":null},
+
+"Comment":"error number for onerr handler",
+"HasWidth":false,
+"Direction":"ReadWrite",
+"MultiMask":null,
+"Label":"BAS_ERRNUM",
+"Value":222,
+"Source":"Project",
+"Type":"ExternalAddr",
+"LabelAnno":"None"},
+
+"BAS_HANDLERR":{
+"DataDescriptor":{
+"Length":1,
+"Format":"NumericLE",
+"SubFormat":"Hex",
+"SymbolRef":null},
+
+"Comment":"routine to handle errors if onerr goto active",
+"HasWidth":false,
+"Direction":"ReadWrite",
+"MultiMask":null,
+"Label":"BAS_HANDLERR",
+"Value":62185,
+"Source":"Project",
+"Type":"Constant",
+"LabelAnno":"None"},
+
+"FM_CLOSE":{
+"DataDescriptor":{
+"Length":1,
+"Format":"NumericLE",
+"SubFormat":"Hex",
+"SymbolRef":null},
+
+"Comment":"",
+"HasWidth":false,
+"Direction":"ReadWrite",
+"MultiMask":null,
+"Label":"FM_CLOSE",
+"Value":2,
+"Source":"Project",
+"Type":"Constant",
+"LabelAnno":"None"},
+
+"FM_OPEN":{
+"DataDescriptor":{
+"Length":1,
+"Format":"NumericLE",
+"SubFormat":"Hex",
+"SymbolRef":null},
+
+"Comment":"",
+"HasWidth":false,
+"Direction":"ReadWrite",
+"MultiMask":null,
+"Label":"FM_OPEN",
+"Value":1,
+"Source":"Project",
+"Type":"Constant",
+"LabelAnno":"None"},
+
+"FM_READ":{
+"DataDescriptor":{
+"Length":1,
+"Format":"NumericLE",
+"SubFormat":"Hex",
+"SymbolRef":null},
+
+"Comment":"",
+"HasWidth":false,
+"Direction":"ReadWrite",
+"MultiMask":null,
+"Label":"FM_READ",
+"Value":3,
+"Source":"Project",
+"Type":"Constant",
+"LabelAnno":"None"}}},
+
+"AddressMap":[{
+"Offset":0,
+"Addr":520}],
+"TypeHints":[{
+"Low":0,
+"High":0,
+"Hint":"Code"}],
+"StatusFlagOverrides":{
+},
+
+"Comments":{
+"45":"address of RWTS IOB",
+"51":"slot*16",
+"57":"push slot number",
+"61":"push drive number",
+"71":"Call type: OPEN",
+"78":"Call subtype: N/A",
+"81":"Record length: 1",
+"86":"(high byte of record length)",
+"91":"Volume: any",
+"94":"Drive number (from RWTS)",
+"98":"Slot number (from RWTS)",
+"102":"File type: Binary",
+"107":"Filename to open",
+"121":"begin quote",
+"131":"length of filename buffer (-1)",
+"135":"clear filename buffer to spaces",
+"143":"avoid filename buffer overrun",
+"155":"end of line or",
+"157":"end quote terminates filename",
+"163":"discard rest of basic line",
+"168":"do not create file if not found",
+"173":"carry set if DOS error",
+"180":"file type of opened file",
+"186":"is file type B?",
+"188":"yes, read it",
+"199":"READ file",
+"202":"read/write range of bytes",
+"208":"read 0004 bytes (file addr and len)",
+"218":"read into our fileaddr/filelen",
+"228":"unknown. cannot find docs on FM offset 0A/0B",
+"237":"execute READ",
+"243":"anticipating our load address low byte is $00",
+"248":"place file length into FM READ block",
+"254":"save high byte of filelen",
+"257":"#\u003cusrvec (page aligned)",
+"260":"load address low byte",
+"265":"start of free space",
+"267":"add $200 to BAS_STREND",
+"269":"STREND+$101 \u003c= usrvec \u003c= STREND+$200",
+"273":"restore high byte of filelen",
+"277":"memtop = usrvec + filelen",
+"280":"#\u003eusrvec",
+"282":"load address high byte",
+"287":"Ensure memtop \u003c HIMEM",
+"298":"program does not fit, bail",
+"307":"???",
+"330":"Return to BASIC",
+"331":"set errno",
+"336":"Restore BASIC stack pointer",
+"339":"handle ONERR (bypasses stack/errno set)",
+"348":"falls through",
+"381":"exit loop",
+"429":"always"},
+
+"LongComments":{
+"-2147483647":{
+"Text":"Disassembly of RBOOT, the DOS Toolkit relocatable loader boot shim, as described in \"Applesoft Tool Kit\" on ch.4 pg.29 -- which see for usage\r\ninformation. This is used to load Apple\u0027s relocatable Hi-Res Character Generator (HRCG).\r\n\r\nThis bloads at $208 and, after a CALL 520, itself bloads RLOAD into free space around 1-2 pages above BASIC variables, then points the USR vector there. There is enough padding to let you allocate some simple variables without clobbering RLOAD before you can use it. You can then load relocatable modules (file type R) by calling RLOAD via USR(0).\r\n\r\nNot documented there: you can load a different binary file (instead of RLOAD) by quoting it after the call: CALL 520\"RLOAD2\". That could be left over from the development process.\r\n\r\nDisasm by Jim Ursetto https://github.com/ursetto with 6502bench SourceGen.",
+"BoxMode":true,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"45":{
+"Text":"First, obtain the current slot and drive number from DOS RWTS.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"62":{
+"Text":"Build a file manager call to open RLOAD.\r\n",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"121":{
+"Text":"If a quoted argument is next on the BASIC CALL line, set the filename to load to that (instead of RLOAD). For example: CALL 520\"RLOAD2\" (end quote can be omitted if end of line). This was probably for debugging the relocator.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"331":{
+"Text":"Close file and jump to ONERR handler, which is expected to be active. X is error number (here $06, $0A or $0E). Note: Sets the BASIC errno and restores stack, normally done at the beginning of HANDLERR.",
+"BoxMode":true,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"195":{
+"Text":"Read RLOAD into just after end of BASIC variables, ignoring its load address of $800. It will be page-aligned and with $101-$200 bytes of padding, presumably so a few simple variable allocations afterward will not clobber it. Later, BASIC\u0027s USR vector is pointed to this code at offset 0.",
+"BoxMode":true,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"301":{
+"Text":"The program fits in memory, so load it and update BASIC\u0027s USR vector with our temporary usrvec.\r\n",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"262":{
+"Text":"Round STREND down to the nearest page and add $200, setting usrvec (our load address and USR vector) to $101 - $200 bytes past the start of Applesoft free space. (The layout is PROGRAM, VARS, ARRAYS, FREE, STRINGS, with strings growing down from HIMEM, so STREND is the end of array variable data and the start of free space.) usrvec temporarily holds the USR vector until we confirm the program will fit.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0}},
+
+"Notes":{
+"301":{
+"Text":"It\u0027s not clear the file read/close is checked for error.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":-256},
+
+"357":{
+"Text":"TODO\r\n",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0}},
+
+"UserLabels":{
+"0":{
+"Label":"rboot_entry",
+"Value":520,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"12":{
+"Label":"filename",
+"Value":532,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"135":{
+"Label":"loop",
+"Value":655,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"301":{
+"Label":"setup_usr",
+"Value":821,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"377":{
+"Label":"loop",
+"Value":897,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"431":{
+"Label":"done",
+"Value":951,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"8":{
+"Label":"usrvec",
+"Value":528,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"42":{
+"Label":"start",
+"Value":562,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"10":{
+"Label":"memtop",
+"Value":530,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"163":{
+"Label":"discard_eol",
+"Value":683,
+"Source":"User",
+"Type":"LocalOrGlobalAddr",
+"LabelAnno":"None"},
+
+"168":{
+"Label":"no_more_args",
+"Value":688,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"142":{
+"Label":"copy_filename",
+"Value":662,
+"Source":"User",
+"Type":"LocalOrGlobalAddr",
+"LabelAnno":"None"},
+
+"351":{
+"Label":"call_dos_fm",
+"Value":871,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"342":{
+"Label":"close_file",
+"Value":862,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"331":{
+"Label":"onerr",
+"Value":851,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"180":{
+"Label":"check_binary",
+"Value":700,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"195":{
+"Label":"read_file",
+"Value":715,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"6":{
+"Label":"filelen",
+"Value":526,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"4":{
+"Label":"fileaddr",
+"Value":524,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"}},
+
+"OperandFormats":{
+"4":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"None",
+"SymbolRef":null},
+
+"6":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"None",
+"SymbolRef":null},
+
+"8":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"None",
+"SymbolRef":null},
+
+"10":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"None",
+"SymbolRef":null},
+
+"71":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Symbol",
+"SymbolRef":{
+"Label":"FM_OPEN",
+"Part":"Low"}},
+
+"107":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Symbol",
+"SymbolRef":{
+"Label":"filename",
+"Part":"Low"}},
+
+"111":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Symbol",
+"SymbolRef":{
+"Label":"filename",
+"Part":"High"}},
+
+"121":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Ascii",
+"SymbolRef":null},
+
+"135":{
+"Length":3,
+"Format":"NumericLE",
+"SubFormat":"Symbol",
+"SymbolRef":{
+"Label":"filename",
+"Part":"Low"}},
+
+"157":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Ascii",
+"SymbolRef":null},
+
+"197":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Symbol",
+"SymbolRef":{
+"Label":"FM_READ",
+"Part":"Low"}},
+
+"218":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Symbol",
+"SymbolRef":{
+"Label":"fileaddr",
+"Part":"Low"}},
+
+"223":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Symbol",
+"SymbolRef":{
+"Label":"fileaddr",
+"Part":"High"}},
+
+"339":{
+"Length":3,
+"Format":"NumericLE",
+"SubFormat":"Symbol",
+"SymbolRef":{
+"Label":"BAS_HANDLERR",
+"Part":"Low"}},
+
+"344":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Symbol",
+"SymbolRef":{
+"Label":"FM_CLOSE",
+"Part":"Low"}}},
+
+"LvTables":{
+"42":{
+"Variables":[{
+"DataDescriptor":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Hex",
+"SymbolRef":null},
+
+"Comment":"DOS FM / RWTS-IOB param list",
+"HasWidth":true,
+"Direction":"ReadWrite",
+"MultiMask":null,
+"Label":"param_list",
+"Value":6,
+"Source":"Variable",
+"Type":"ExternalAddr",
+"LabelAnno":"None"}],
+"ClearPrevious":false}},
+
+"Visualizations":[],
+"VisualizationAnimations":[],
+"VisualizationSets":{
+},
+
+"RelocList":{
+},
+
+"DbrValues":{
+}}
