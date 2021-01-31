@@ -1,0 +1,339 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <title>RBOOT Disassembly</title>
+
+    <meta content="en-us" http-equiv="Content-Language" />
+    <meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
+    <meta name="description" content="SourceGen-generated disassembly of RBOOT" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <link href="SGStyle.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+    <p style="font-size:smaller;"><a href="./">(back to project page)</a></p>
+    <h1>RBOOT Disassembly</h1>
+
+    <div id="code-lines">
+        <!-- The CodeLines marker is not optional, and may only appear once -->
+<pre>                   ********************************************************************************
+                   * Disassembly of RBOOT, the DOS Toolkit relocatable loader boot shim, as       *
+                   * described in "Applesoft Tool Kit" on ch.4 pg.29. This is used to load        *
+                   * Apple's relocatable Hi-Res Character Generator (HRCG).                       *
+                   *                                                                              *
+                   * This BLOADS at $208 and, after a CALL 520, itself loads RLOAD into free      *
+                   * space around 1-2 pages above BASIC variables, then points the USR vector     *
+                   * there. There is enough padding to let you allocate some simple variables     *
+                   * without clobbering RLOAD before you can use it. You can then load            *
+                   * relocatable modules (file type R) by calling RLOAD via USR(0).               *
+                   *                                                                              *
+                   * RBOOT's relocation method is simple but clever. It disassembles RLOAD with   *
+                   * monitor routines to find 16-bit operands, which must be addresses on a 6502. *
+                   * If the address is within the module (per the file header address and length) *
+                   * it is relocated. If not--e.g. an Applesoft call--it is left alone. This      *
+                   * can't relocate 8-bit low or high address immediates, and only works on code  *
+                   * (not data) but RLOAD is written with this in mind. RLOAD even uses the BIT   *
+                   * operand once to disguise a data address as code.                             *
+                   *                                                                              *
+                   * Not documented: you can load a different binary file (instead of RLOAD) by   *
+                   * quoting it after the call: CALL 520"RLOAD2". That could be left over from    *
+                   * the development process.                                                     *
+                   *                                                                              *
+                   * Disasm by Jim Ursetto https://github.com/ursetto with 6502bench SourceGen.   *
+                   ********************************************************************************
+                   <a name="SymFM_OPEN">FM_OPEN</a>         .eq     $01    {const}
+                   <a name="SymFM_CLOSE">FM_CLOSE</a>        .eq     $02    {const}
+                   <a name="SymFM_READ">FM_READ</a>         .eq     $03    {const}
+                   <a name="SymBAS_HANDLERR">BAS_HANDLERR</a>    .eq     $f2e9  {const}    ;routine to handle errors if onerr goto active
+                   <a name="SymBAS_USRVEC">BAS_USRVEC</a>      .eq     $0a    {addr/3}   ;USR() command vector
+                   <a name="SymMON_LENGTH">MON_LENGTH</a>      .eq     $2f               ;output of MON_INSDS2
+                   <a name="SymMON_A3L">MON_A3L</a>         .eq     $40               ;general purpose
+                   <a name="SymMON_A3H">MON_A3H</a>         .eq     $41               ;general purpose
+                   <a name="SymBAS_STREND">BAS_STREND</a>      .eq     $6d    {addr/2}   ;pointer to end of numeric storage (2b)
+                   <a name="SymBAS_MEMSIZE">BAS_MEMSIZE</a>     .eq     $73    {addr/2}   ;HIMEM (2b)
+                   <a name="SymBAS_CHRGET">BAS_CHRGET</a>      .eq     $b1               ;get next character or Applesoft token
+                   <a name="SymBAS_CHRGOT">BAS_CHRGOT</a>      .eq     $b7               ;get next, but don't advance TXTPTR
+                   <a name="SymBAS_ERRNUM">BAS_ERRNUM</a>      .eq     $de               ;error number for onerr handler
+                   <a name="SymBAS_REMSTK">BAS_REMSTK</a>      .eq     $f8               ;stack pointer saved before each statement
+                   <a name="SymDOS_FM">DOS_FM</a>          .eq     $03d6             ;DOS file manager entry point
+                   <a name="SymDOS_LOCFPL">DOS_LOCFPL</a>      .eq     $03dc             ;loads Y/A with address of FM param list
+                   <a name="SymDOS_LOCRPL">DOS_LOCRPL</a>      .eq     $03e3             ;loads Y/A with address of RWTS IOB
+                   <a name="SymMON_INSDS2">MON_INSDS2</a>      .eq     $f88e
+
+                                   .org    $0208
+0208: 4c 32 02     <a name="Symrboot_entry">rboot_entry</a>     jmp     <a href="#Symstart">start</a>
+
+020b: e0           <a name="Symrload_bound">rload_bound</a>     .dd1    $e0               ;end of RLOAD, rounded up to next page
+020c: 00 00        <a name="Symfileaddr">fileaddr</a>        .dd2    $0000             ;ORG of RLOAD (as found in file address)
+020e: 00 00        <a name="Symfilelen">filelen</a>         .dd2    $0000             ;length of RLOAD
+0210: 00 00        <a name="Symusrvec">usrvec</a>          .dd2    $0000             ;intermediate copy of USR vector
+0212: 00 00        <a name="Symrload_end">rload_end</a>       .dd2    $0000             ;end of relocated RLOAD in memory
+0214: d2 cc cf c1+ <a name="Symfilename">filename</a>        .str    ↑“RLOAD                         ”
+
+                   ; param_list ($06/$07) is also used to pass rload_end to RLOAD.
+                   param_list      .var    $06    {addr/2}   ;DOS FM / RWTS-IOB param list
+
+0232: 20 e3 03     <a name="Symstart">start</a>           jsr     <a href="#SymDOS_LOCRPL">DOS_LOCRPL</a>
+                   ; First, obtain the current slot and drive number from DOS RWTS.
+0235: 84 06                        sty     param_list        ;address of RWTS IOB
+0237: 85 07                        sta     param_list+1
+0239: a0 01                        ldy     #$01
+023b: b1 06                        lda     (param_list),y    ;slot*16
+023d: 4a                           lsr     A
+023e: 4a                           lsr     A
+023f: 4a                           lsr     A
+0240: 4a                           lsr     A
+0241: 48                           pha                       ;push slot number
+0242: c8                           iny
+0243: b1 06                        lda     (param_list),y
+0245: 48                           pha                       ;push drive number
+                   ; Build a file manager call to open RLOAD.
+0246: 20 dc 03                     jsr     <a href="#SymDOS_LOCFPL">DOS_LOCFPL</a>
+0249: 84 06                        sty     param_list
+024b: 85 07                        sta     param_list+1
+024d: a0 00                        ldy     #$00
+024f: a9 01                        lda     #<a href="#SymFM_OPEN">FM_OPEN</a>          ;Call type: OPEN
+0251: 91 06                        sta     (param_list),y
+0253: c8                           iny
+0254: a9 00                        lda     #$00
+0256: 91 06                        sta     (param_list),y    ;Call subtype: N/A
+0258: c8                           iny
+0259: a9 01                        lda     #$01              ;Record length: 1
+025b: 91 06                        sta     (param_list),y
+025d: c8                           iny
+025e: a9 00                        lda     #$00              ;(high byte of record length)
+0260: 91 06                        sta     (param_list),y
+0262: c8                           iny
+0263: 91 06                        sta     (param_list),y    ;Volume: any
+0265: c8                           iny
+0266: 68                           pla                       ;Drive number (from RWTS)
+0267: 91 06                        sta     (param_list),y
+0269: c8                           iny
+026a: 68                           pla                       ;Slot number (from RWTS)
+026b: 91 06                        sta     (param_list),y
+026d: c8                           iny
+026e: a9 04                        lda     #$04              ;File type: Binary
+0270: 91 06                        sta     (param_list),y
+0272: c8                           iny
+0273: a9 14                        lda     #&lt;<a href="#Symfilename">filename</a>        ;Filename to open
+0275: 91 06                        sta     (param_list),y
+0277: a9 02                        lda     #&gt;<a href="#Symfilename">filename</a>
+0279: c8                           iny
+027a: 91 06                        sta     (param_list),y
+027c: 20 b7 00                     jsr     <a href="#SymBAS_CHRGOT">BAS_CHRGOT</a>
+027f: f0 2f                        beq     <a href="#Symno_more_args">no_more_args</a>
+                   ; If a quoted argument is next on the BASIC CALL line, set the filename to load
+                   ; to that (instead of RLOAD). For example: CALL 520"RLOAD2" (end quote can be
+                   ; omitted if end of line). This was probably for debugging the relocator.
+0281: c9 22                        cmp     #‘"’              ;begin quote
+0283: d0 26                        bne     <a href="#Symdiscard_eol">discard_eol</a>
+0285: 20 b1 00                     jsr     <a href="#SymBAS_CHRGET">BAS_CHRGET</a>
+0288: f0 26                        beq     <a href="#Symno_more_args">no_more_args</a>
+028a: aa                           tax
+028b: a0 1d                        ldy     #$1d              ;length of filename buffer (-1)
+028d: a9 a0                        lda     #$a0
+028f: 99 14 02     @loop           sta     <a href="#Symfilename">filename</a>,y        ;clear filename buffer to spaces
+0292: 88                           dey
+0293: 10 fa                        bpl     @loop
+0295: 8a                           txa
+0296: c8           <a name="Symcopy_filename">copy_filename</a>   iny
+0297: c0 1e                        cpy     #$1e              ;avoid filename buffer overrun
+0299: b0 10                        bcs     <a href="#Symdiscard_eol">discard_eol</a>
+029b: 09 80                        ora     #$80
+029d: 99 14 02                     sta     <a href="#Symfilename">filename</a>,y
+02a0: 20 b1 00                     jsr     <a href="#SymBAS_CHRGET">BAS_CHRGET</a>
+02a3: f0 0b                        beq     <a href="#Symno_more_args">no_more_args</a>      ;end of line or
+02a5: c9 22                        cmp     #‘"’              ;end quote terminates filename
+02a7: f0 02                        beq     <a href="#Symdiscard_eol">discard_eol</a>
+02a9: d0 eb                        bne     <a href="#Symcopy_filename">copy_filename</a>
+
+02ab: 20 b1 00     <a name="Symdiscard_eol">discard_eol</a>     jsr     <a href="#SymBAS_CHRGET">BAS_CHRGET</a>        ;discard rest of basic line
+02ae: d0 fb                        bne     <a href="#Symdiscard_eol">discard_eol</a>
+02b0: a2 01        <a name="Symno_more_args">no_more_args</a>    ldx     #$01              ;do not create file if not found
+02b2: 20 67 03                     jsr     <a href="#Symcall_dos_fm">call_dos_fm</a>
+02b5: 90 05                        bcc     <a href="#Symcheck_binary">check_binary</a>      ;carry set if DOS error
+02b7: a2 06                        ldx     #$06
+02b9: 4c 53 03                     jmp     <a href="#Symonerr">onerr</a>
+
+02bc: a0 07        <a name="Symcheck_binary">check_binary</a>    ldy     #$07              ;file type of opened file
+02be: b1 06                        lda     (param_list),y
+02c0: 29 7f                        and     #$7f
+02c2: c9 04                        cmp     #$04              ;is file type B?
+02c4: f0 05                        beq     <a href="#Symread_file">read_file</a>         ;yes, read it
+02c6: a2 0a                        ldx     #$0a
+02c8: 4c 53 03                     jmp     <a href="#Symonerr">onerr</a>
+
+                   ********************************************************************************
+                   * Read RLOAD into just after end of BASIC variables, ignoring its load address *
+                   * of $800. It will be page-aligned and with $101-$200 bytes of padding,        *
+                   * presumably so a few simple variable allocations afterward will not clobber   *
+                   * it. Later, BASIC's USR vector is pointed to this code at offset 0.           *
+                   ********************************************************************************
+02cb: a0 00        <a name="Symread_file">read_file</a>       ldy     #$00
+02cd: a9 03                        lda     #<a href="#SymFM_READ">FM_READ</a>
+02cf: 91 06                        sta     (param_list),y    ;READ file
+02d1: c8                           iny
+02d2: a9 02                        lda     #$02              ;read/write range of bytes
+02d4: 91 06                        sta     (param_list),y
+02d6: a0 06                        ldy     #$06
+02d8: a9 04                        lda     #$04              ;read 0004 bytes (file addr and len)
+02da: 91 06                        sta     (param_list),y
+02dc: c8                           iny
+02dd: a9 00                        lda     #$00
+02df: 91 06                        sta     (param_list),y
+02e1: c8                           iny
+02e2: a9 0c                        lda     #&lt;<a href="#Symfileaddr">fileaddr</a>        ;read into our fileaddr/filelen
+02e4: 91 06                        sta     (param_list),y
+02e6: c8                           iny
+02e7: a9 02                        lda     #&gt;<a href="#Symfileaddr">fileaddr</a>
+02e9: 91 06                        sta     (param_list),y
+02eb: c8                           iny
+02ec: a9 04                        lda     #$04              ;unknown. cannot find docs on FM offset 0A/0B
+02ee: 91 06                        sta     (param_list),y
+02f0: c8                           iny
+02f1: a9 00                        lda     #$00
+02f3: 91 06                        sta     (param_list),y
+02f5: 20 67 03                     jsr     <a href="#Symcall_dos_fm">call_dos_fm</a>       ;execute READ
+02f8: ad 0e 02                     lda     <a href="#Symfilelen">filelen</a>
+02fb: 8d 12 02                     sta     <a href="#Symrload_end">rload_end</a>         ;anticipating our load address low byte is $00
+02fe: a0 06                        ldy     #$06
+0300: 91 06                        sta     (param_list),y    ;place file length into FM READ block
+0302: c8                           iny
+0303: ad 0f 02                     lda     <a href="#Symfilelen">filelen</a>+1
+0306: 48                           pha                       ;save high byte of filelen
+0307: 91 06                        sta     (param_list),y
+0309: a9 00                        lda     #$00              ;#&lt;usrvec (page aligned)
+030b: c8                           iny
+030c: 91 06                        sta     (param_list),y    ;load address low byte
+                   ; Round STREND down to the nearest page and add $200, setting usrvec (our load
+                   ; address and USR vector) to $101 - $200 bytes past the start of Applesoft free
+                   ; space. (The layout is PROGRAM, VARS, ARRAYS, FREE, STRINGS, with strings
+                   ; growing down from HIMEM, so STREND is the end of array variable data and the
+                   ; start of free space.) usrvec temporarily holds the USR vector until we confirm
+                   ; the program will fit.
+030e: 8d 10 02                     sta     <a href="#Symusrvec">usrvec</a>
+0311: a6 6e                        ldx     <a href="#SymBAS_STREND">BAS_STREND</a>+1      ;start of free space
+0313: e8                           inx                       ;add $200 to BAS_STREND
+0314: e8                           inx
+0315: 8e 11 02                     stx     <a href="#Symusrvec">usrvec</a>+1          ;STREND+$101 &lt;= usrvec &lt;= STREND+$200
+0318: 18                           clc
+0319: 68                           pla                       ;restore high byte of filelen
+031a: 6d 11 02                     adc     <a href="#Symusrvec">usrvec</a>+1
+031d: 8d 13 02                     sta     <a href="#Symrload_end">rload_end</a>+1       ;rload_end = usrvec + filelen
+0320: 8a                           txa                       ;#&gt;usrvec
+0321: c8                           iny
+0322: 91 06                        sta     (param_list),y    ;load address high byte
+0324: ad 12 02                     lda     <a href="#Symrload_end">rload_end</a>
+0327: c5 73                        cmp     <a href="#SymBAS_MEMSIZE">BAS_MEMSIZE</a>       ;Ensure rload_end lies under HIMEM
+0329: ad 13 02                     lda     <a href="#Symrload_end">rload_end</a>+1
+032c: e5 74                        sbc     <a href="#SymBAS_MEMSIZE">BAS_MEMSIZE</a>+1
+032e: 90 05                        bcc     <a href="#Symsetup_usr">setup_usr</a>
+0330: a2 0e                        ldx     #$0e
+0332: 4c 53 03                     jmp     <a href="#Symonerr">onerr</a>             ;program does not fit, bail
+
+                   ; The program fits in memory, so load it, relocate it, and update BASIC's USR
+                   ; vector with our temporary usrvec. File operations here are not checked for
+                   ; error.
+0335: 20 67 03     <a name="Symsetup_usr">setup_usr</a>       jsr     <a href="#Symcall_dos_fm">call_dos_fm</a>
+0338: 20 5e 03                     jsr     <a href="#Symclose_file">close_file</a>
+033b: 20 6d 03                     jsr     <a href="#Symrelocate">relocate</a>
+033e: ad 10 02                     lda     <a href="#Symusrvec">usrvec</a>
+0341: 85 0b                        sta     <a href="#SymBAS_USRVEC">BAS_USRVEC</a>+1
+0343: ad 11 02                     lda     <a href="#Symusrvec">usrvec</a>+1
+0346: 85 0c                        sta     <a href="#SymBAS_USRVEC">BAS_USRVEC</a>+2
+                   ; Stash rload_end in a safe place in zero page. This will be used shortly by
+                   ; RLOAD to verify it won't clobber itself when loading the relocatable module.
+0348: ad 12 02                     lda     <a href="#Symrload_end">rload_end</a>
+034b: 85 06                        sta     param_list
+034d: ad 13 02                     lda     <a href="#Symrload_end">rload_end</a>+1
+0350: 85 07                        sta     param_list+1
+0352: 60                           rts                       ;Return to BASIC
+
+                   ********************************************************************************
+                   * Close file and jump to ONERR handler, which is expected to be active. X is   *
+                   * error number (here $06, $0A or $0E). Note: Sets the BASIC errno and restores *
+                   * stack, normally done at the beginning of HANDLERR.                           *
+                   ********************************************************************************
+0353: 86 de        <a name="Symonerr">onerr</a>           stx     <a href="#SymBAS_ERRNUM">BAS_ERRNUM</a>        ;set errno
+0355: 20 5e 03                     jsr     <a href="#Symclose_file">close_file</a>
+0358: a6 f8                        ldx     <a href="#SymBAS_REMSTK">BAS_REMSTK</a>        ;Restore BASIC stack pointer
+035a: 9a                           txs
+035b: 4c ef f2                     jmp     <a href="#SymBAS_HANDLERR">BAS_HANDLERR</a>+6    ;handle ONERR (bypasses stack/errno set)
+
+035e: a0 00        <a name="Symclose_file">close_file</a>      ldy     #$00
+0360: a9 02                        lda     #<a href="#SymFM_CLOSE">FM_CLOSE</a>
+0362: 91 06                        sta     (param_list),y
+0364: 4c 67 03                     jmp     <a href="#Symcall_dos_fm">call_dos_fm</a>       ;falls through
+
+0367: 20 dc 03     <a name="Symcall_dos_fm">call_dos_fm</a>     jsr     <a href="#SymDOS_LOCFPL">DOS_LOCFPL</a>
+036a: 4c d6 03                     jmp     <a href="#SymDOS_FM">DOS_FM</a>
+
+                   ; Relocate RLOAD. Scan the RLOAD area with monitor disassembly routines to find
+                   ; 16-bit operands (addresses), and if they are internal to RLOAD, relocate them.
+                   ; We can identify internal addresses because they are between the ORG of RLOAD
+                   ; (fileaddr) and its end (+filelen). Scan ends when a BRK is encountered. Note:
+                   ; the org and usrvec are always page-aligned, and the end is rounded up to the
+                   ; next page.
+036d: ad 10 02     <a name="Symrelocate">relocate</a>        lda     <a href="#Symusrvec">usrvec</a>            ;usrvec low byte is implicitly 0
+0370: 85 40                        sta     <a href="#SymMON_A3L">MON_A3L</a>           ;store usrvec in 16-bit temporary
+0372: ad 11 02                     lda     <a href="#Symusrvec">usrvec</a>+1          ;... for scan start address
+0375: 85 41                        sta     <a href="#SymMON_A3H">MON_A3H</a>
+0377: ad 0f 02                     lda     <a href="#Symfilelen">filelen</a>+1         ;high byte of length
+037a: 38                           sec                       ;add 1 page for BCS below
+037b: 6d 0d 02                     adc     <a href="#Symfileaddr">fileaddr</a>+1        ;page of usrvec+fileaddr+filelen+1
+037e: 8d 0b 02                     sta     <a href="#Symrload_bound">rload_bound</a>       ;next page after end of RLOAD
+0381: a0 00        @loop           ldy     #$00
+0383: b1 40                        lda     (<a href="#SymMON_A3L">MON_A3L</a>),y       ;get opcode
+0385: f0 30                        beq     @done             ;exit on first zero opcode (BRK)
+0387: 20 8e f8                     jsr     <a href="#SymMON_INSDS2">MON_INSDS2</a>        ;compute operand length
+038a: a4 2f                        ldy     <a href="#SymMON_LENGTH">MON_LENGTH</a>        ;output of INSDS2
+038c: c0 02                        cpy     #$02              ;look for a two-byte operand (address)
+038e: d0 18                        bne     <a href="#Symnext_opcode">next_opcode</a>
+0390: b1 40                        lda     (<a href="#SymMON_A3L">MON_A3L</a>),y       ;get operand high byte
+0392: cd 0b 02                     cmp     <a href="#Symrload_bound">rload_bound</a>       ;are we &gt; the last RLOAD page (&gt;= RLOAD+1)
+0395: b0 11                        bcs     <a href="#Symnext_opcode">next_opcode</a>       ;yes, skip relocation
+0397: cd 0d 02                     cmp     <a href="#Symfileaddr">fileaddr</a>+1        ;are we &lt; the lowest RLOAD page?
+039a: 90 0c                        bcc     <a href="#Symnext_opcode">next_opcode</a>       ;yes, skip relocation
+                   ; To each 16-bit address operand, add the usrvec page - fileaddr page to get the
+                   ; relocated page. The lower byte is ignored, as both the file and usrvec are
+                   ; page-aligned.
+039c: ad 11 02                     lda     <a href="#Symusrvec">usrvec</a>+1
+039f: 18                           clc
+03a0: 71 40                        adc     (<a href="#SymMON_A3L">MON_A3L</a>),y       ;*operand += usrvec page
+03a2: 38                           sec
+03a3: ed 0d 02                     sbc     <a href="#Symfileaddr">fileaddr</a>+1        ;*operand -= fileaddr page
+03a6: 91 40                        sta     (<a href="#SymMON_A3L">MON_A3L</a>),y
+03a8: 98           <a name="Symnext_opcode">next_opcode</a>     tya
+03a9: 38                           sec                       ;add opcode len (1)
+03aa: 65 40                        adc     <a href="#SymMON_A3L">MON_A3L</a>           ;and operand len (A) to code ptr
+03ac: 85 40                        sta     <a href="#SymMON_A3L">MON_A3L</a>
+03ae: a5 41                        lda     <a href="#SymMON_A3H">MON_A3H</a>
+03b0: 69 00                        adc     #$00
+03b2: 85 41                        sta     <a href="#SymMON_A3H">MON_A3H</a>
+03b4: b8                           clv
+03b5: 50 ca                        bvc     @loop             ;always
+
+03b7: 60           @done           rts
+</pre>
+
+
+    </div>
+
+    <!-- SymbolTable is optional; remove this entire section from the template if you don't want it -->
+    <div id="symbol-table">
+        <h2>Symbol Table</h2>
+<p>No exported symbols found.</p>
+
+    </div>
+
+    <div id="footer">
+        <hr/>
+        <p>HTML generated by <a href="https://6502bench.com/">6502bench SourceGen</a> v1.7.3
+        on 2021/01/30 <!--20:56:51 -06:00--></p>
+        <p>Expression style: Common</p>
+        <!-- parameters: cols=16,8,18,100;extraCols=Address,Bytes;byteSpc=True;commaBulk=False;nonuPfx='@';varPfx='';labelBrk=False;notes=True;gfx=True;opWrap=64 -->
+    </div>
+</body>
+</html>

@@ -1,0 +1,725 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <title>RLOAD Disassembly</title>
+
+    <meta content="en-us" http-equiv="Content-Language" />
+    <meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
+    <meta name="description" content="SourceGen-generated disassembly of RLOAD" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <link href="SGStyle.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+    <p style="font-size:smaller;"><a href="./">(back to project page)</a></p>
+    <h1>RLOAD Disassembly</h1>
+
+    <div id="code-lines">
+        <!-- The CodeLines marker is not optional, and may only appear once -->
+<pre>                   ********************************************************************************
+                   * RLOAD is the second link in the RBOOT -&gt; RLOAD -&gt; MODULE chain. RBOOT places *
+                   * RLOAD in low memory in free heap space just after BASIC variables, relocates *
+                   * any 16-bit address operands, and sets the BASIC USR() vector to point to it. *
+                   *                                                                              *
+                   * RLOAD is called via ADRS=USR(0),"MODULE[,Sn,Dn]" and loads relocatable       *
+                   * module MODULE just under HIMEM, relocating it and returning its address.     *
+                   * HIMEM is also updated to protect it.                                         *
+                   *                                                                              *
+                   * RLOAD relocation is much more sophisticated than RBOOT, which effectively    *
+                   * disassembles code and looks for 16-bit address operands that appear to point *
+                   * to its own code. RLOAD relies on a relocation table generated at assembly    *
+                   * time, which points to every operand to be relocated, and even works on 8-bit *
+                   * immediate HI/LO bytes.                                                       *
+                   *                                                                              *
+                   * Once finished, RLOAD itself is expendable and may be overwritten by variable *
+                   * or string allocation.                                                        *
+                   *                                                                              *
+                   * Analysis by Jim Ursetto with 6502bench SourceGen v1.7.3                      *
+                   ********************************************************************************
+                   <a name="SymBAS_MEMSIZE">BAS_MEMSIZE</a>     .eq     $73    {addr/2}   ;HIMEM (2b)
+                   <a name="SymBAS_CHRGET">BAS_CHRGET</a>      .eq     $b1               ;get next character or Applesoft token
+                   <a name="SymBAS_CHRGOT">BAS_CHRGOT</a>      .eq     $b7               ;get next, but don't advance TXTPTR
+                   <a name="SymBAS_ERRNUM">BAS_ERRNUM</a>      .eq     $de
+                   <a name="SymBAS_REMSTK">BAS_REMSTK</a>      .eq     $f8               ;stack pointer saved before each statement
+                   <a name="SymDOS_FM">DOS_FM</a>          .eq     $03d6             ;DOS file manager entry point
+                   <a name="SymDOS_LOCFPL">DOS_LOCFPL</a>      .eq     $03dc             ;loads Y/A with address of FM param list
+                   <a name="SymDOS_LOCRPL">DOS_LOCRPL</a>      .eq     $03e3             ;loads Y/A with address of RWTS IOB
+                   <a name="SymBAS_GIVAYF">BAS_GIVAYF</a>      .eq     $e2f2             ;convert 16-bit (A,Y) to float, store in FAC
+                   <a name="SymBAS_HANDLERR">BAS_HANDLERR</a>    .eq     $f2e9             ;routine to handle errors if onerr goto active
+
+                                   .org    $0800
+                   rload_end       .var    $06    {addr/2}   ;passed from RBOOT; end of our own code
+                   fm_params       .var    $f9    {addr/2}   ;ptr to DOS FM param list
+                   rwts_iob        .var    $fb    {addr/2}   ;ptr to RWTS parameter list
+                   load_addr       .var    $fd    {addr/2}   ;relocated module load address
+
+0800: 20 e3 03     <a name="Symusr_entry">usr_entry</a>       jsr     <a href="#SymDOS_LOCRPL">DOS_LOCRPL</a>
+0803: 84 fb                        sty     rwts_iob
+0805: 85 fc                        sta     rwts_iob+1
+0807: a0 01                        ldy     #$01
+0809: b1 fb                        lda     (rwts_iob),y      ;get current slot number*16
+080b: 4a                           lsr     A
+080c: 4a                           lsr     A
+080d: 4a                           lsr     A
+080e: 4a                           lsr     A
+080f: 8d 6c 0b                     sta     <a href="#Symslot">slot</a>              ;set default slot
+0812: c8                           iny
+0813: b1 fb                        lda     (rwts_iob),y      ;get current drive number
+0815: 8d 6d 0b                     sta     <a href="#Symdrive">drive</a>             ;set default drive
+0818: a0 1d                        ldy     #$1d              ;30 byte filename
+081a: a9 a0                        lda     #‘ ’ | $80
+081c: 99 6e 0b     @clear_fn       sta     <a href="#Symfilename">filename</a>,y        ;clear filename
+081f: 88                           dey
+0820: 10 fa                        bpl     @clear_fn
+0822: 20 b7 00                     jsr     <a href="#SymBAS_CHRGOT">BAS_CHRGOT</a>
+0825: d0 08        <a name="Symparse_begin">parse_begin</a>     bne     <a href="#Symparse_args">parse_args</a>
+0827: a2 0b        <a name="Symerror_0b">error_0b</a>        ldx     #$0b
+0829: 2c                           bit ▼   $02a2
+082a: a2 02        <a name="Symerror_02">error_02</a>        ldx     #$02
+082c: 4c d8 08                     jmp     <a href="#Symonerr">onerr</a>
+
+                   ********************************************************************************
+                   * The USR arg list must start with a quoted filename, but can optionally be    *
+                   * preceded by any number of commas. The filename may end in a quote or just    *
+                   * EOL. All spaces are ignored, so the filename on disk cannot contain any. A   *
+                   * slot and/or drive arg is accepted (with the numeric value being range-       *
+                   * checked) and if specified multiple times, the last takes effect. Junk after  *
+                   * the slot/drive number is ignored. Other args are disallowed.                 *
+                   *                                                                              *
+                   * Accepted examples:                                                           *
+                   * USR(0)"HRCG"                -&gt; HRCG, current slot &amp; drive                    *
+                   * USR(0)"HRCG, S6, D1"        -&gt; HRCG, slot 6, drive 1                         *
+                   * USR(0)"H R C G,S6"          -&gt; HRCG, slot 6                                  *
+                   * USR(0),,,"HRCG,S6FOO,D2BAZ  -&gt; HRCG, slot 6, drive 2                         *
+                   * USR(0),"HRCG,S6,S7,D1,D2"   -&gt; HRCG, slot 7, drive 2                         *
+                   *                                                                              *
+                   * Disallowed examples:                                                         *
+                   * USR(0),HRCG                 -&gt; no open quote                                 *
+                   * USR(0),"HRCG,,S6"           -&gt; empty arg                                     *
+                   * USR(0),"HRCG,S6,"           -&gt; empty arg                                     *
+                   * USR(0),"HRCG,S8"            -&gt; illegal slot number                           *
+                   * USR(0),"HRCG,D3"            -&gt; illegal drive number                          *
+                   ********************************************************************************
+082f: 90 f6        <a name="Symparse_args">parse_args</a>      bcc     <a href="#Symerror_0b">error_0b</a>          ;first arg char cannot be a digit
+0831: c9 2c                        cmp     #‘,’
+0833: d0 06                        bne     <a href="#Symdemand_quote">demand_quote</a>
+0835: 20 b1 00                     jsr     <a href="#SymBAS_CHRGET">BAS_CHRGET</a>
+0838: 4c 25 08                     jmp     <a href="#Symparse_begin">parse_begin</a>
+
+083b: c9 22        <a name="Symdemand_quote">demand_quote</a>    cmp     #‘"’
+083d: d0 e8                        bne     <a href="#Symerror_0b">error_0b</a>
+083f: a0 00                        ldy     #$00
+0841: f0 0a                        beq     <a href="#Symcopy_filename">copy_filename</a>     ;always
+
+                   ; Copy filename, ending in a comma, quote or end of line.
+                   ; If a comma is encountered, parse slot (Sn) and/or drive (Dn) arg.
+0843: 09 80        <a name="Symcopy_fn_char">copy_fn_char</a>    ora     #$80
+0845: 99 6e 0b                     sta     <a href="#Symfilename">filename</a>,y
+0848: c8                           iny
+0849: c0 1e                        cpy     #$1e              ;stop after 30 bytes
+084b: b0 0f                        bcs     <a href="#Symdiscard_to_comma">discard_to_comma</a>  ;and look for slot/drive
+084d: 20 b1 00     <a name="Symcopy_filename">copy_filename</a>   jsr     <a href="#SymBAS_CHRGET">BAS_CHRGET</a>
+0850: f0 3a                        beq     <a href="#Symend_of_args">end_of_args</a>
+0852: 90 ef                        bcc     <a href="#Symcopy_fn_char">copy_fn_char</a>      ;it is a digit
+0854: c9 2c                        cmp     #‘,’
+0856: f0 0d                        beq     <a href="#Symparse_slot">parse_slot</a>
+0858: c9 22                        cmp     #‘"’
+085a: d0 e7                        bne     <a href="#Symcopy_fn_char">copy_fn_char</a>
+                   ; discard rest of argument, until comma/eol
+085c: 20 b1 00     <a name="Symdiscard_to_comma">discard_to_comma</a> jsr    <a href="#SymBAS_CHRGET">BAS_CHRGET</a>
+085f: f0 2b                        beq     <a href="#Symend_of_args">end_of_args</a>
+0861: c9 2c                        cmp     #‘,’
+0863: d0 f7                        bne     <a href="#Symdiscard_to_comma">discard_to_comma</a>
+                   ; Parse slot (Sn) n=1..7 and drive (Dn) n=1..2. Extraneous chars until the next
+                   ; comma or EOL are ignored, e.g. "NAME,S6FOOBAR,D2BAZ" parses. 
+0865: 20 b1 00     <a name="Symparse_slot">parse_slot</a>      jsr     <a href="#SymBAS_CHRGET">BAS_CHRGET</a>
+0868: f0 bd                        beq     <a href="#Symerror_0b">error_0b</a>
+086a: c9 53                        cmp     #‘S’              ;slot, e.g. S6
+086c: d0 0b                        bne     <a href="#Symparse_drive">parse_drive</a>
+086e: 20 0a 0a                     jsr     <a href="#Symparse_1_thru_7">parse_1_thru_7</a>
+0871: b0 b7                        bcs     <a href="#Symerror_02">error_02</a>
+0873: 8d 6c 0b                     sta     <a href="#Symslot">slot</a>              ;use specified slot instead of the default
+0876: 4c 5c 08                     jmp     <a href="#Symdiscard_to_comma">discard_to_comma</a>
+
+0879: c9 44        <a name="Symparse_drive">parse_drive</a>     cmp     #‘D’              ;drive, e.g. D1
+087b: d0 aa                        bne     <a href="#Symerror_0b">error_0b</a>
+087d: 20 0a 0a                     jsr     <a href="#Symparse_1_thru_7">parse_1_thru_7</a>
+0880: b0 a8                        bcs     <a href="#Symerror_02">error_02</a>
+0882: c9 03                        cmp     #$03              ;ensure drive 1 or 2
+0884: b0 a4                        bcs     <a href="#Symerror_02">error_02</a>
+0886: 8d 6d 0b                     sta     <a href="#Symdrive">drive</a>
+0889: 4c 5c 08                     jmp     <a href="#Symdiscard_to_comma">discard_to_comma</a>
+
+                   ; $fb changes meanings a few times. First it is RWTS IOB, then it is the module
+                   ; ORG (load address from file), and finally it points to the end of relocated
+                   ; file in memory.
+                   module_org      .var    $fb    {addr/2}   ;unrelocated org (addr) of module
+
+088c: a9 00        <a name="Symend_of_args">end_of_args</a>     lda     #$00
+088e: 85 fd                        sta     load_addr         ;why initialize this to zero
+0890: 85 fe                        sta     load_addr+1
+                   ; It's possible "inc reloc_flag" is conditionally assembled; if present, as
+                   ; here, the flag is 1 and relocation is enabled.
+                   ; (It would be shorter to lda #0/#1 + sta instead of sta+inc.)
+0892: 8d 92 0b                     sta     <a href="#Symreloc_flag">reloc_flag</a>
+0895: ee 92 0b                     inc     <a href="#Symreloc_flag">reloc_flag</a>        ;$01 (relocate) in normal operation
+0898: 20 1d 0a                     jsr     <a href="#Symopen_file">open_file</a>
+089b: 20 e2 0a                     jsr     <a href="#Symsetup_read_1byte">setup_read_1byte</a>  ;setup FM to read 1 byte at current filepos
+089e: 20 18 0b                     jsr     <a href="#Symcall_fm_get_byte">call_fm_get_byte</a>
+08a1: 85 fb                        sta     module_org        ;&lt;org
+08a3: 20 18 0b                     jsr     <a href="#Symcall_fm_get_byte">call_fm_get_byte</a>
+08a6: 85 fc                        sta     module_org+1      ;&gt;org
+08a8: 20 18 0b                     jsr     <a href="#Symcall_fm_get_byte">call_fm_get_byte</a>  ;&lt;len (ignored)
+08ab: 20 18 0b                     jsr     <a href="#Symcall_fm_get_byte">call_fm_get_byte</a>  ;&gt;len (ignored)
+                   ; Relocatable modules have an extra 2 bytes at the beginning, before the code
+                   ; starts. In HRCG, this is $00 $08. This is the 16-bit length of the module
+                   ; code, with the remainder a relocation table.
+08ae: 20 18 0b                     jsr     <a href="#Symcall_fm_get_byte">call_fm_get_byte</a>  ;in HRCG, $00
+08b1: 8d 8e 0b                     sta     <a href="#Symmodule_len">module_len</a>        ;length of module code
+08b4: 20 18 0b                     jsr     <a href="#Symcall_fm_get_byte">call_fm_get_byte</a>  ;in HRCG, $08
+08b7: 8d 8f 0b                     sta     <a href="#Symmodule_len">module_len</a>+1
+08ba: 18                           clc
+08bb: a5 73                        lda     <a href="#SymBAS_MEMSIZE">BAS_MEMSIZE</a>
+08bd: ed 8e 0b                     sbc     <a href="#Symmodule_len">module_len</a>
+08c0: 85 fd                        sta     load_addr         ;load at HIMEM - module_len
+08c2: a5 74                        lda     <a href="#SymBAS_MEMSIZE">BAS_MEMSIZE</a>+1
+08c4: ed 8f 0b                     sbc     <a href="#Symmodule_len">module_len</a>+1
+08c7: 85 fe                        sta     load_addr+1
+08c9: a5 06                        lda     rload_end         ;passed from RBOOT
+08cb: c5 fd                        cmp     load_addr
+08cd: a5 07                        lda     rload_end+1
+08cf: e5 fe                        sbc     load_addr+1
+08d1: 90 0d                        bcc     @cont             ;enough space, rload_end &lt; load_addr
+08d3: a2 0e                        ldx     #$0e              ;not enough memory, error $0E
+                   ; Close and exit with error. Input: X=errno.
+08d5: 20 8f 0a     <a name="Symclose_onerr">close_onerr</a>     jsr     <a href="#Symclose_fm">close_fm</a>          ;close the open relocatable file
+08d8: 86 de        <a name="Symonerr">onerr</a>           stx     <a href="#SymBAS_ERRNUM">BAS_ERRNUM</a>        ;set onerr number
+08da: a6 f8                        ldx     <a href="#SymBAS_REMSTK">BAS_REMSTK</a>        ;restore stack
+08dc: ba                           tsx
+08dd: 4c ef f2                     jmp     <a href="#SymBAS_HANDLERR">BAS_HANDLERR</a>+6    ;handle onerr condition
+
+08e0: ad 92 0b     @cont           lda     <a href="#Symreloc_flag">reloc_flag</a>
+08e3: f0 21                        beq     @no_reloc
+                   ; Compute relocation delta if relocation enabled.
+08e5: a5 fd                        lda     load_addr
+08e7: 38                           sec
+08e8: e5 fb                        sbc     module_org
+08ea: 8d 8c 0b                     sta     <a href="#Symreloc_delta">reloc_delta</a>       ;load_addr - module_org = relocation delta
+08ed: a5 fe                        lda     load_addr+1
+08ef: e5 fc                        sbc     module_org+1
+08f1: 8d 8d 0b                     sta     <a href="#Symreloc_delta">reloc_delta</a>+1
+                   ********************************************************************************
+                   * In normal operation, this sets the file's load address to the start address  *
+                   * in high memory. But if const_one is set to zero, the load address is set to  *
+                   * the module's ORG. some_params is set to end of file in both cases (i.e.      *
+                   * offset +worklen). In other words, 0 seems to disable relocation.             *
+                   *                                                                              *
+                   * There's some redundancy here to support both modes. Simplified:              *
+                   *                                                                              *
+                   * adrs = load_addr                                                             *
+                   * some_params = worklen + load_addr                                            *
+                   * load_addr = adrs                                                             *
+                   * ----                                                                         *
+                   * adrs = some_params ;org                                                      *
+                   * some_params = worklen + some_params                                          *
+                   * load_addr = adrs                                                             *
+                   ********************************************************************************
+08f4: ad 92 0b                     lda     <a href="#Symreloc_flag">reloc_flag</a>
+08f7: f0 0d                        beq     @no_reloc
+                   ; Relocation enabled; module loads at relocated addr near HIMEM.
+08f9: a5 fd                        lda     load_addr
+08fb: 8d 90 0b                     sta     <a href="#Symadrs">adrs</a>
+08fe: a5 fe                        lda     load_addr+1
+0900: 8d 91 0b                     sta     <a href="#Symadrs">adrs</a>+1
+0903: 4c 10 09                     jmp     @compute_end
+
+                   ; Relocation disabled; module loads at its ORG (file address).
+0906: a5 fb        @no_reloc       lda     module_org
+0908: 8d 90 0b                     sta     <a href="#Symadrs">adrs</a>
+090b: a5 fc                        lda     module_org+1
+090d: 8d 91 0b                     sta     <a href="#Symadrs">adrs</a>+1
+                   ; Compute end address of relocated file in memory, and store it in $fb (which
+                   ; changes meaning yet again).
+                   file_end        .var    $fb    {addr/2}   ;end of module in memory
+
+0910: ad 8e 0b     @compute_end    lda     <a href="#Symmodule_len">module_len</a>        ;file_end = adrs + module_len
+0913: 18                           clc
+0914: 6d 90 0b                     adc     <a href="#Symadrs">adrs</a>
+0917: 85 fb                        sta     file_end          ;clobbers some_params, but it was stored in L0B8C
+0919: ad 8f 0b                     lda     <a href="#Symmodule_len">module_len</a>+1
+091c: 6d 91 0b                     adc     <a href="#Symadrs">adrs</a>+1
+091f: 85 fc                        sta     file_end+1
+                   ; Load the file into memory 1 byte at a time at ADRS, which is not particularly
+                   ; fast. Stops when address file_end is reached.
+                   file_addr       .var    $fd    {addr/2}   ;used for indexing into module; was load_addr
+
+0921: ad 90 0b                     lda     <a href="#Symadrs">adrs</a>              ;start at ADRS
+0924: 85 fd                        sta     file_addr
+0926: ad 91 0b                     lda     <a href="#Symadrs">adrs</a>+1
+0929: 85 fe                        sta     file_addr+1
+092b: a0 00                        ldy     #$00
+092d: 20 18 0b     @read_byte      jsr     <a href="#Symcall_fm_get_byte">call_fm_get_byte</a>  ;read 1 byte
+0930: 91 fd                        sta     (file_addr),y
+0932: e6 fd                        inc     file_addr
+0934: d0 02                        bne     @nowrap
+0936: e6 fe                        inc     file_addr+1
+0938: a5 fd        @nowrap         lda     file_addr
+093a: c5 fb                        cmp     file_end          ;read until file_end
+093c: a5 fe                        lda     file_addr+1
+093e: e5 fc                        sbc     file_end+1
+0940: 90 eb                        bcc     @read_byte        ;read next byte
+0942: ad 92 0b                     lda     <a href="#Symreloc_flag">reloc_flag</a>        ;done reading, are we relocating?
+0945: d0 03                        bne     @relocate         ;relocate loaded module
+0947: 4c e6 09                     jmp     <a href="#Symreturn_adrs">return_adrs</a>       ;no relocation, return ADRS to BASIC
+
+                   ********************************************************************************
+                   * Process the relocation table entries present at the end of the module code.  *
+                   * Each entry is 4 bytes long: an 8-bit entry type, a 16-bit code offset, and a *
+                   * final byte as argument or ignored. At each offset we find and relocate a 16- *
+                   * bit address, or an 8-bit address representing the low or high byte of an     *
+                   * address.                                                                     *
+                   *                                                                              *
+                   * 81 YY XX 00: Relocate 16-bit address $HHLL at offset +$XXYY                  *
+                   * 41 YY XX NN: Relocate  8-bit hi byte $HHNN at offset +$XXYY                  *
+                   * 01 YY XX 00: Relocate  8-bit lo byte $00LL at offset +$XXYY                  *
+                   * A1 YY XX 00: Relocate 16-bit address $LLHH at offset +$XXYY                  *
+                   * 00: End table                                                                *
+                   *                                                                              *
+                   * Only bits 7, 6 and 5 of the entry type are significant in RLOAD, so $90      *
+                   * should work the same as $81, but types in the wild seem to use the canonical *
+                   * forms above. (I have not observed $A1 in use.)                               *
+                   *                                                                              *
+                   * Note: The table starts in the file at module_len bytes after the start of    *
+                   * code. B-type files have a 4-byte header and R-type files have a 6 byte       *
+                   * header, so if examining a module in a non-relocation-aware way (such as      *
+                   * plain BLOAD), the table appears to start 2 bytes later than expected ($9602  *
+                   * in HRCG).                                                                    *
+                   ********************************************************************************
+094a: a9 00        @relocate       lda     #$00
+094c: 8d 8e 0b                     sta     <a href="#Symmodule_len">module_len</a>        ;now used as a temp reloc_addr arg
+094f: 8d 8f 0b                     sta     <a href="#Symmodule_len">module_len</a>+1
+0952: 20 18 0b                     jsr     <a href="#Symcall_fm_get_byte">call_fm_get_byte</a>  ;byte 1
+0955: 8d 93 0b                     sta     <a href="#Symentry_type">entry_type</a>
+0958: 20 18 0b                     jsr     <a href="#Symcall_fm_get_byte">call_fm_get_byte</a>  ;&lt;index into file (?) -- byte 2
+095b: 18                           clc
+095c: 6d 90 0b                     adc     <a href="#Symadrs">adrs</a>
+095f: 85 fd                        sta     file_addr         ;&lt;index into file in memory
+0961: 08                           php                       ;preserve adc carry thru jsr
+0962: 20 18 0b                     jsr     <a href="#Symcall_fm_get_byte">call_fm_get_byte</a>  ;&gt;index into file (?) -- byte 3
+0965: 28                           plp                       ;restore carry
+0966: 6d 91 0b                     adc     <a href="#Symadrs">adrs</a>+1
+0969: 85 fe                        sta     file_addr+1       ;&gt;index into file in memory
+096b: a0 00                        ldy     #$00
+096d: a9 ff                        lda     #$ff              ;mask $ff sets Z flag if byte is zero
+096f: 2c 93 0b                     bit     <a href="#Symentry_type">entry_type</a>        ;update Z, N, V
+0972: f0 72                        beq     <a href="#Symreturn_adrs">return_adrs</a>       ;end on 0 byte. file length ignored.
+0974: 30 2b                        bmi     @reloc_addr       ;if byte bit 7 set
+0976: 70 13                        bvs     @reloc_hi         ;if byte bit 6 set
+                   NOTE: Below, module_len is reused as a temporary subroutine argument to
+                   reloc_addr. It is an address to relocate, no longer the module length. But we
+                   can't rename it in the disassembly as it isn't a local variable.
+                   ; This entry type has bit 6 and 7 clear and is non-zero.
+                   ; 
+                   ; Relocate 8-bit address. The high byte of the result is discarded so this wraps
+                   ; around at $FF. This can be used in conjunction with reloc_hi to relocate a 16-
+                   ; bit address split across non-consecutive bytes -- see below.
+0978: b1 fd        @reloc_lo       lda     (file_addr),y     ;flag byte is $01..$3F
+097a: 8d 8e 0b                     sta     <a href="#Symmodule_len">module_len</a>        ;read low byte only
+097d: 20 f6 09                     jsr     <a href="#Symreloc_addr">reloc_addr</a>        ;relocate it (high byte don't care)
+0980: ad 8e 0b                     lda     <a href="#Symmodule_len">module_len</a>
+0983: 91 fd                        sta     (file_addr),y     ;write only low byte back
+0985: 20 18 0b                     jsr     <a href="#Symcall_fm_get_byte">call_fm_get_byte</a>  ;discard byte 4
+0988: 4c 4a 09                     jmp     @relocate
+
+                   ********************************************************************************
+                   * Relocate an 8-bit value, treated as the high byte of an address. The low     *
+                   * byte is taken from byte 4 of the entry, not from the code. After relocation  *
+                   * the high byte is written back and the low byte discarded (but may have       *
+                   * impacted the high byte via carry).                                           *
+                   *                                                                              *
+                   * This can be used in tandem with reloc_lo to relocate a 16-bit value split    *
+                   * into two parts. For example, to relocate VAR ($8E75) in                      *
+                   *                                                                              *
+                   *   LDA #$75   ; #&lt;VAR                                                         *
+                   *   STA $38                                                                    *
+                   *   LDA #$8E   ; #&gt;VAR                                                         *
+                   *   STA $39                                                                    *
+                   *                                                                              *
+                   * you would reloc_lo the byte $75, and then reloc_hi the byte $8E, with the    *
+                   * low byte (entry byte 4) set to $75. The assembler knows that this is a split *
+                   * address and can remember the low byte when creating the reloc_hi entry.      *
+                   *                                                                              *
+                   * Similarly, this could relocate a jump table with low bytes on one page and   *
+                   * high bytes on another.                                                       *
+                   ********************************************************************************
+098b: b1 fd        @reloc_hi       lda     (file_addr),y     ;flag byte is $40-$7F
+098d: 8d 8f 0b                     sta     <a href="#Symmodule_len">module_len</a>+1      ;read low byte to reloc high byte
+0990: 20 18 0b                     jsr     <a href="#Symcall_fm_get_byte">call_fm_get_byte</a>
+0993: 8d 8e 0b                     sta     <a href="#Symmodule_len">module_len</a>        ;read byte 4 to reloc low byte
+0996: 20 f6 09                     jsr     <a href="#Symreloc_addr">reloc_addr</a>        ;relocate
+0999: ad 8f 0b                     lda     <a href="#Symmodule_len">module_len</a>+1
+099c: 91 fd                        sta     (file_addr),y     ;and write reloc high byte back
+099e: 4c 4a 09                     jmp     @relocate
+
+                   ; Relocate a 16-bit address. The offset of the address in the module code is
+                   ; taken from bytes 2 (low) and 3 (high). Byte 4 is ignored. The 16-bit address
+                   ; at this offset is relocated in place. If bit 5 is set, the address to relocate
+                   ; is big-endian.
+09a1: a9 20        @reloc_addr     lda     #$20
+09a3: 2d 93 0b                     and     <a href="#Symentry_type">entry_type</a>        ;test bit 5
+09a6: d0 1f                        bne     @reloc_addr_swap  ;bit 5 set -- big-endian address
+09a8: b1 fd                        lda     (file_addr),y     ;entry type is $8x or $9x
+09aa: 8d 8e 0b                     sta     <a href="#Symmodule_len">module_len</a>        ;store address in bytes 2-3 in module_len temp
+09ad: c8                           iny
+09ae: b1 fd                        lda     (file_addr),y
+09b0: 8d 8f 0b                     sta     <a href="#Symmodule_len">module_len</a>+1
+09b3: 20 f6 09                     jsr     <a href="#Symreloc_addr">reloc_addr</a>        ;relocate the temp address
+09b6: ad 8f 0b                     lda     <a href="#Symmodule_len">module_len</a>+1
+09b9: 91 fd                        sta     (file_addr),y     ;and write it back to the file
+09bb: 88                           dey                       ;(read index 0,1 and write index 1,0)
+09bc: ad 8e 0b                     lda     <a href="#Symmodule_len">module_len</a>
+09bf: 91 fd                        sta     (file_addr),y
+09c1: 20 18 0b                     jsr     <a href="#Symcall_fm_get_byte">call_fm_get_byte</a>  ;discard byte 4
+09c4: 4c 4a 09                     jmp     @relocate
+
+                   ; Same as reloc_addr, but the address to relocate is byte-swapped (big-endian).
+                   ; Swap when reading so we can relocate it, but write it back in big-endian
+                   ; order.
+09c7: b1 fd        @reloc_addr_swap lda    (file_addr),y     ;$Ax, $Bx .. $Fx
+09c9: 8d 8f 0b                     sta     <a href="#Symmodule_len">module_len</a>+1      ;read low address byte into high reloc byte
+09cc: c8                           iny
+09cd: b1 fd                        lda     (file_addr),y
+09cf: 8d 8e 0b                     sta     <a href="#Symmodule_len">module_len</a>        ;and high addr byte into low reloc byte
+09d2: 20 f6 09                     jsr     <a href="#Symreloc_addr">reloc_addr</a>        ;relocate little-endian address
+09d5: ad 8e 0b                     lda     <a href="#Symmodule_len">module_len</a>
+09d8: 91 fd                        sta     (file_addr),y     ;write low reloc byte into high byte
+09da: 88                           dey
+09db: ad 8f 0b                     lda     <a href="#Symmodule_len">module_len</a>+1      ;write high reloc byte into low byte
+09de: 91 fd                        sta     (file_addr),y
+09e0: 20 18 0b                     jsr     <a href="#Symcall_fm_get_byte">call_fm_get_byte</a>  ;discard byte 4
+09e3: 4c 4a 09                     jmp     @relocate
+
+                   ; Set HIMEM to ADRS (the starting address of the module), and return ADRS from
+                   ; USR(0) as a floating point value, continuing on the interpreter.
+09e6: 20 8f 0a     <a name="Symreturn_adrs">return_adrs</a>     jsr     <a href="#Symclose_fm">close_fm</a>
+09e9: ac 90 0b                     ldy     <a href="#Symadrs">adrs</a>
+09ec: 84 73                        sty     <a href="#SymBAS_MEMSIZE">BAS_MEMSIZE</a>
+09ee: ad 91 0b                     lda     <a href="#Symadrs">adrs</a>+1
+09f1: 85 74                        sta     <a href="#SymBAS_MEMSIZE">BAS_MEMSIZE</a>+1
+09f3: 4c f2 e2                     jmp     <a href="#SymBAS_GIVAYF">BAS_GIVAYF</a>        ;float signed int in A,Y
+
+                   ; Relocate the address in module_len in place by adding the relocation delta.
+09f6: 18           <a name="Symreloc_addr">reloc_addr</a>      clc
+09f7: ad 8c 0b                     lda     <a href="#Symreloc_delta">reloc_delta</a>
+09fa: 6d 8e 0b                     adc     <a href="#Symmodule_len">module_len</a>
+09fd: 8d 8e 0b                     sta     <a href="#Symmodule_len">module_len</a>
+0a00: ad 8d 0b                     lda     <a href="#Symreloc_delta">reloc_delta</a>+1
+0a03: 6d 8f 0b                     adc     <a href="#Symmodule_len">module_len</a>+1
+0a06: 8d 8f 0b                     sta     <a href="#Symmodule_len">module_len</a>+1
+0a09: 60                           rts
+
+                   ; Parse a number 1-7, returning $01-$07 in A. Carry set on parse error.
+0a0a: 20 b1 00     <a name="Symparse_1_thru_7">parse_1_thru_7</a>  jsr     <a href="#SymBAS_CHRGET">BAS_CHRGET</a>
+0a0d: b0 0c                        bcs     @parse_err
+0a0f: c9 31                        cmp     #‘1’
+0a11: 90 08                        bcc     @parse_err
+0a13: c9 38                        cmp     #‘8’
+0a15: b0 04                        bcs     @parse_err
+0a17: 29 0f                        and     #$0f
+0a19: 18                           clc
+0a1a: 60                           rts
+
+0a1b: 38           @parse_err      sec
+0a1c: 60                           rts
+
+                   ; Opens 'filename', acquiring a free DOS buffer. buf_fn_ptr and fm_param_data
+                   ; are updated accordingly.
+                   ; A/X/Y are preserved.
+                   buf_fn_ptr      .var    $fb    {addr/2}
+
+0a1d: 48           <a name="Symopen_file">open_file</a>       pha                       ;save X/Y
+0a1e: 98                           tya
+0a1f: 48                           pha
+0a20: 8a                           txa
+0a21: 48                           pha
+0a22: 20 b4 0a                     jsr     <a href="#Symfind_free_buffer">find_free_buffer</a>  ;overwrites $fb
+0a25: a0 1d                        ldy     #$1d              ;copy filename into DOS buffer
+0a27: b9 6e 0b     @copy_fn        lda     <a href="#Symfilename">filename</a>,y
+0a2a: 91 fb                        sta     (buf_fn_ptr),y    ;note: this is actually the buffer filename pointer now
+0a2c: 88                           dey
+0a2d: 10 f8                        bpl     @copy_fn
+0a2f: 20 dc 03                     jsr     <a href="#SymDOS_LOCFPL">DOS_LOCFPL</a>        ;get FM param list location into fm_params
+0a32: 84 f9                        sty     fm_params
+0a34: 85 fa                        sta     fm_params+1
+0a36: a0 15                        ldy     #$15
+0a38: a9 00                        lda     #$00
+0a3a: 99 56 0b     @clear_fm_data  sta     <a href="#Symfm_param_data">fm_param_data</a>,y   ;clear local FM param list
+0a3d: 88                           dey
+0a3e: 10 fa                        bpl     @clear_fm_data
+                   ; Copy the matching values from the DOS buffer (directly after the filename
+                   ; entry at $00-$1d) into the local FM param list: file manager workarea buffer
+                   ; (0C/0D), T/S sector buffer (0E/0F), and data sector buffer (10/11).
+0a40: a0 1e                        ldy     #$1e              ;push 6 bytes $1e-$23 on the stack
+0a42: b1 fb        @push_byte      lda     (buf_fn_ptr),y    ;from the free DOS buffer
+0a44: 48                           pha
+0a45: c8                           iny
+0a46: c0 24                        cpy     #$24
+0a48: d0 f8                        bne     @push_byte
+0a4a: a0 05                        ldy     #$05              ;pull 6 bytes from stack
+0a4c: 68           @copy_byte      pla
+0a4d: 99 62 0b                     sta     <a href="#Symfm_param_data">fm_param_data</a>+12,y ;and copy to $0C-$11 of local FM params
+0a50: 88                           dey
+0a51: 10 f9                        bpl     @copy_byte
+                   ; Set up the rest of the OPEN call parameters.
+0a53: a9 01                        lda     #$01              ;OPEN
+0a55: 8d 56 0b                     sta     <a href="#Symfm_param_data">fm_param_data</a>
+0a58: a9 00                        lda     #$00              ;N/A
+0a5a: 8d 57 0b                     sta     <a href="#Symfm_param_data">fm_param_data</a>+1
+0a5d: a9 01                        lda     #$01              ;record length 1
+0a5f: 8d 58 0b                     sta     <a href="#Symfm_param_data">fm_param_data</a>+2
+0a62: a9 00                        lda     #$00
+0a64: 8d 59 0b                     sta     <a href="#Symfm_param_data">fm_param_data</a>+3
+0a67: ad 6d 0b                     lda     <a href="#Symdrive">drive</a>
+0a6a: 8d 5b 0b                     sta     <a href="#Symfm_param_data">fm_param_data</a>+5
+0a6d: ad 6c 0b                     lda     <a href="#Symslot">slot</a>
+0a70: 8d 5c 0b                     sta     <a href="#Symfm_param_data">fm_param_data</a>+6
+                   ; This is not R (relocatable) type $08, but it doesn't matter: this value is
+                   ; ignored unless creating the file. The type of the OPENed file is returned in
+                   ; byte 7, but we never check it.
+0a73: a9 04                        lda     #$04              ;B (binary) type
+0a75: 8d 5d 0b                     sta     <a href="#Symfm_param_data">fm_param_data</a>+7
+                   ; Using ptr_to_filename lets us get the relocated address of filename, whereas
+                   ; loading an immediate LO and HI byte would not.
+0a78: ad 53 0b                     lda     <a href="#Symptr_to_filename">ptr_to_filename</a>   ;lda #&lt;filename
+0a7b: 8d 5e 0b                     sta     <a href="#Symfm_param_data">fm_param_data</a>+8
+0a7e: ad 54 0b                     lda     <a href="#Symptr_to_filename">ptr_to_filename</a>+1 ;lda #&gt;filename
+0a81: 8d 5f 0b                     sta     <a href="#Symfm_param_data">fm_param_data</a>+9
+0a84: a2 01                        ldx     #$01              ;do not create file if missing
+0a86: 20 27 0b                     jsr     <a href="#Symcall_fm_with_data">call_fm_with_data</a> ;open the file
+0a89: 68                           pla                       ;restore A/X/Y
+0a8a: aa                           tax
+0a8b: 68                           pla
+0a8c: a8                           tay
+0a8d: 68                           pla
+0a8e: 60                           rts
+
+                   NOTE: Here buf_fn_ptr is computed as the FM work area (buf+$200) + $2D, which
+                   happens to be same as the filename entry (buf+$22D). It's possible this is
+                   already set correctly on entry.
+                   ; Close the file represented by fm_param_data. As per API, write 0 into the
+                   ; first byte of the filename entry to mark it unused.
+0a8f: 98           <a name="Symclose_fm">close_fm</a>        tya                       ;save X and Y
+0a90: 48                           pha
+0a91: 8a                           txa
+0a92: 48                           pha
+0a93: a9 02                        lda     #$02              ;CLOSE
+0a95: 8d 56 0b                     sta     <a href="#Symfm_param_data">fm_param_data</a>
+0a98: 20 27 0b                     jsr     <a href="#Symcall_fm_with_data">call_fm_with_data</a>
+0a9b: ad 62 0b                     lda     <a href="#Symfm_param_data">fm_param_data</a>+12  ;get file manager workarea buffer
+0a9e: 18                           clc
+0a9f: 69 2d                        adc     #$2d              ;plus $2D bytes for filename entry
+0aa1: 85 fb                        sta     buf_fn_ptr
+0aa3: ad 63 0b                     lda     <a href="#Symfm_param_data">fm_param_data</a>+13  ;and save it for writing into
+0aa6: 69 00                        adc     #$00
+0aa8: 85 fc                        sta     buf_fn_ptr+1
+0aaa: a9 00                        lda     #$00              ;write 0 into filename entry (buf+$200+$2D)
+0aac: a8                           tay
+0aad: 91 fb                        sta     (buf_fn_ptr),y
+0aaf: 68                           pla                       ;restore X and Y
+0ab0: aa                           tax
+0ab1: 68                           pla
+0ab2: a8                           tay
+0ab3: 60                           rts
+
+                   ; Find the first free DOS buffer and return a pointer to it (its filename entry,
+                   ; as is standard) in $FB. Preserves A/Y and exits ONERR if no buffers available.
+0ab4: 48           <a name="Symfind_free_buffer">find_free_buffer</a> pha                      ;preserve A/Y
+0ab5: 98                           tya
+0ab6: 48                           pha
+                   ; This locates DOS. In the tiny DOS_LOCFPL subroutine at $3DC, there is a LDA
+                   ; $9D0F, where "9D" (at $3DE) is changed by DOS to match its load address. (Ex:
+                   ; $9D00 on 48K+ machines, $3D00 on 24K, $1D00 on 16K.) $9D0E/F is always +$0E
+                   ; into DOS and is a well-known constant holding the address of the FM param
+                   ; list. Although there are other vectors in the $3D0 list, they were not
+                   ; guaranteed to point to the first page of DOS.
+                   buf_fn_ptr      .var    $fb    {addr/2}   ;address of ptr to DOS buffer (filename)
+
+0ab7: ad de 03                     lda     <a href="#SymDOS_LOCFPL">DOS_LOCFPL</a>+2
+0aba: 85 fc                        sta     buf_fn_ptr+1
+0abc: a0 00                        ldy     #$00
+0abe: 84 fb                        sty     buf_fn_ptr        ;$9D00 is first link in chain
+0ac0: f0 02                        beq     @get_fn_entry     ;always. BIT would save 1 byte
+
+                   ; Follow the chain of DOS buffers to find a free one. The chain starts at $9D00,
+                   ; pointing to the filename entry in the first buffer. Subsequent filename
+                   ; pointers are at filename + $24. Note the clever use of the #$00 index for
+                   ; $9D00 followed by #$24 thereafter.
+                   ; 
+                   ; bufptr = $9D00
+                   ; n = 0
+                   ; do {
+                   ;  bufptr = *(bufptr+n)
+                   ;  if (!bufptr) { error }   // no more buffers
+                   ;  if (!*bufptr) { return } // found free buffer
+                   ;  n = $24
+                   ; }
+                   ; 
+                   ; Buffer format:
+                   ; $9d00: ptr to filename entry in first buffer
+                   ; buf: the DOS buffer
+                   ; buf+$22d: filename entry (null bytes if unused)
+                   ; buf+$22d+$24: ptr to filename entry in next buffer
+0ac2: a0 24        @next_buffer    ldy     #$24              ;address of next buffer ($22D + $24 = $251)
+0ac4: b1 fb        @get_fn_entry   lda     (buf_fn_ptr),y    ;get low byte of next filename address
+0ac6: 48                           pha
+0ac7: c8                           iny
+0ac8: b1 fb                        lda     (buf_fn_ptr),y    ;...get high byte
+0aca: d0 02                        bne     @check_free       ;redundant instruction
+0acc: f0 0f                        beq     @error            ;high byte zero, no more buffers; error
+
+0ace: 85 fc        @check_free     sta     buf_fn_ptr+1      ;set dos_addr to the address of the first buffer
+0ad0: 68                           pla
+0ad1: 85 fb                        sta     buf_fn_ptr
+0ad3: a0 00                        ldy     #$00
+0ad5: b1 fb                        lda     (buf_fn_ptr),y    ;get first filename byte
+0ad7: d0 e9                        bne     @next_buffer      ;non-zero, buffer occupied
+0ad9: 68                           pla
+0ada: a8                           tay
+0adb: 68                           pla
+0adc: 60                           rts
+
+0add: a2 0c        @error          ldx     #$0c              ;no buffers available
+0adf: 4c d5 08                     jmp     <a href="#Symclose_onerr">close_onerr</a>
+
+                   ; Set up fm_param_data to READ 1 byte at the current file position. Byte
+                   ; returned at param offset $08.
+0ae2: 48           <a name="Symsetup_read_1byte">setup_read_1byte</a> pha                      ;save A/X/Y
+0ae3: 98                           tya
+0ae4: 48                           pha
+0ae5: 8a                           txa
+0ae6: 48                           pha
+0ae7: a9 03                        lda     #$03
+0ae9: d0 07                        bne     @cont             ;always -- unused entry point ahead
+
+                   ; This is unused, but if you were to enter here, it would set up fm_param_data
+                   ; to WRITE 1 byte instead of READ.
+0aeb: 48           @setup_write_1byte pha
+0aec: 98                           tya
+0aed: 48                           pha
+0aee: 8a                           txa
+0aef: 48                           pha
+0af0: a9 04                        lda     #$04
+0af2: 8d 56 0b     @cont           sta     <a href="#Symfm_param_data">fm_param_data</a>     ;READ (03)
+0af5: a9 01                        lda     #$01
+0af7: 8d 57 0b                     sta     <a href="#Symfm_param_data">fm_param_data</a>+1   ;subcode: read 1 byte
+0afa: a9 00                        lda     #$00
+0afc: 8d 58 0b                     sta     <a href="#Symfm_param_data">fm_param_data</a>+2   ;unused
+0aff: 8d 59 0b                     sta     <a href="#Symfm_param_data">fm_param_data</a>+3   ;unused
+0b02: 8d 5a 0b                     sta     <a href="#Symfm_param_data">fm_param_data</a>+4   ;unused
+0b05: 8d 5b 0b                     sta     <a href="#Symfm_param_data">fm_param_data</a>+5   ;unused
+0b08: a9 01                        lda     #$01
+0b0a: 8d 5c 0b                     sta     <a href="#Symfm_param_data">fm_param_data</a>+6   ;1 byte
+0b0d: a9 00                        lda     #$00
+0b0f: 8d 5d 0b                     sta     <a href="#Symfm_param_data">fm_param_data</a>+7
+0b12: 68                           pla                       ;restore A/X/Y
+0b13: aa                           tax
+0b14: 68                           pla
+0b15: a8                           tay
+0b16: 68                           pla
+0b17: 60                           rts
+
+                   ; Call DOS FM, assuming you already set up a 1-byte READ call
+                   ; (setup_read_1byte), and returns the byte in A.
+                   ; Preserves X/Y.
+0b18: 98           <a name="Symcall_fm_get_byte">call_fm_get_byte</a> tya
+0b19: 48                           pha
+0b1a: 8a                           txa
+0b1b: 48                           pha
+0b1c: 20 27 0b                     jsr     <a href="#Symcall_fm_with_data">call_fm_with_data</a>
+0b1f: 68                           pla
+0b20: aa                           tax
+0b21: 68                           pla
+0b22: a8                           tay
+0b23: ad 5e 0b                     lda     <a href="#Symfm_param_data">fm_param_data</a>+8   ;The byte that was read
+0b26: 60                           rts
+
+                   ; Copy our local FM block (fm_param_data) into DOS, call DOS FM, then copy the
+                   ; result back. Exits via ONERR if FM returned non-zero.
+0b27: 48           <a name="Symcall_fm_with_data">call_fm_with_data</a> pha
+0b28: 98                           tya
+0b29: 48                           pha
+0b2a: 8a                           txa
+0b2b: 48                           pha
+                   ; Copies $16 bytes, though FM blocks are nominally $12 bytes long. The last 4
+                   ; bytes were zeroed.
+0b2c: a0 15                        ldy     #$15
+0b2e: b9 56 0b     @copy_to_fm     lda     <a href="#Symfm_param_data">fm_param_data</a>,y   ;copy $16 (22) bytes into DOS FM
+0b31: 91 f9                        sta     (fm_params),y
+0b33: 88                           dey
+0b34: 10 f8                        bpl     @copy_to_fm
+0b36: 20 d6 03                     jsr     <a href="#SymDOS_FM">DOS_FM</a>            ;call DOS file manager
+0b39: a0 15                        ldy     #$15
+0b3b: b1 f9        @copy_from_fm   lda     (fm_params),y     ;copy $16 bytes back
+0b3d: 99 56 0b                     sta     <a href="#Symfm_param_data">fm_param_data</a>,y
+0b40: 88                           dey
+0b41: 10 f8                        bpl     @copy_from_fm
+0b43: ad 60 0b                     lda     <a href="#Symfm_param_data">fm_param_data</a>+10  ;byte 0A = return code
+0b46: f0 04                        beq     @done
+0b48: aa                           tax                       ;X=non-zero return code
+0b49: 4c d5 08                     jmp     <a href="#Symclose_onerr">close_onerr</a>
+
+0b4c: 68           @done           pla                       ;restore X/Y and return
+0b4d: aa                           tax                       ;after successful FM call
+0b4e: 68                           pla
+0b4f: a8                           tay
+0b50: 68                           pla
+0b51: 60                           rts
+
+                   ; Relocation trick: only 16-bit code operands are relocated, so make this look
+                   ; like one by prefixing it with a BIT opcode. This gives us the relocated
+                   ; address of filename so we can pass it to DOS. 8-bit immediate operands (lda
+                   ; #&lt;filename) can't be relocated, but an 8-bit dereference of a 16-bit operand
+                   ; (lda ptr_to_filename) can. Note that both the contents of this variable, and
+                   ; the variable reference itself, are relocated.
+0b52: 2c                           .dd1    $2c               ;make this look like code with BIT
+0b53: 6e 0b        <a name="Symptr_to_filename">ptr_to_filename</a> .dd2    <a href="#Symfilename">filename</a>          ;so this address is relocated
+                   ********************************************************************************
+                   * End point of relocation scan -- zero byte                                    *
+                   ********************************************************************************
+0b55: 00                           .dd1    $00
+                   ; The variable values below are placeholders, initialized during execution.
+                   ; 
+                   ; FM param lists are $12 bytes long, while this area is $16. I'm not sure why.
+                   ; The last 4 bytes are initialized to zero.
+0b56: a0 c3 a0 a5+ <a name="Symfm_param_data">fm_param_data</a>   .bulk   a0c3a0a597b18dcfa0c8a5f0a0caffa0baa0a090a0a0 ;$16 byte uninitialized FM param data
+0b6c: a0           <a name="Symslot">slot</a>            .dd1    $a0               ;load module from this slot
+0b6d: a0           <a name="Symdrive">drive</a>           .dd1    $a0               ;load module from this drive
+0b6e: f0 ac a0 84+ <a name="Symfilename">filename</a>        .bulk   f0aca084a0a0f0a0a0a0a0a0c5a0b0a2a0a0eda0b1cfa0c38a8da0d399c4 ;30 byte filename
+0b8c: a0 d0        <a name="Symreloc_delta">reloc_delta</a>     .dd2    $d0a0             ;relocation delta
+0b8e: cc a0        <a name="Symmodule_len">module_len</a>      .dd2    $a0cc             ;code length and (later) a temp
+0b90: a0 a0        <a name="Symadrs">adrs</a>            .dd2    $a0a0             ;module address returned to BASIC
+0b92: a0           <a name="Symreloc_flag">reloc_flag</a>      .dd1    $a0               ;whether to relocate; initialized to 1
+0b93: a5           <a name="Symentry_type">entry_type</a>      .dd1    $a5               ;current relocation entry type
+</pre>
+
+
+    </div>
+
+    <!-- SymbolTable is optional; remove this entire section from the template if you don't want it -->
+    <div id="symbol-table">
+        <h2>Symbol Table</h2>
+<p>No exported symbols found.</p>
+
+    </div>
+
+    <div id="footer">
+        <hr/>
+        <p>HTML generated by <a href="https://6502bench.com/">6502bench SourceGen</a> v1.7.3
+        on 2021/01/30 <!--20:32:48 -06:00--></p>
+        <p>Expression style: Common</p>
+        <!-- parameters: cols=16,8,18,100;extraCols=Address,Bytes;byteSpc=True;commaBulk=False;nonuPfx='@';varPfx='';labelBrk=False;notes=True;gfx=True;opWrap=64 -->
+    </div>
+</body>
+</html>
