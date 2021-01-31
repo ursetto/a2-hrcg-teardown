@@ -1,0 +1,1194 @@
+﻿### 6502bench SourceGen dis65 v1.0 ###
+{
+"_ContentVersion":4,
+"FileDataLength":916,
+"FileDataCrc32":1150573012,
+"ProjectProps":{
+"CpuName":"65C02",
+"IncludeUndocumentedInstr":false,
+"TwoByteBrk":false,
+"EntryFlags":32702671,
+"AutoLabelStyle":"Simple",
+"AnalysisParams":{
+"AnalyzeUncategorizedData":true,
+"DefaultTextScanMode":"LowHighAscii",
+"MinCharsForString":4,
+"SeekNearbyTargets":true,
+"UseRelocData":false,
+"SmartPlpHandling":false,
+"SmartPlbHandling":true},
+
+"PlatformSymbolFileIdentifiers":["RT:Apple/F8-ROM.sym65",
+"RT:Apple/Cxxx-IO.sym65",
+"RT:Apple/C08x-DiskII.sym65",
+"RT:Apple/DOS33.sym65",
+"RT:Apple/Applesoft.sym65"],
+"ExtensionScriptFileIdentifiers":["RT:Apple/ProDOS8.cs",
+"RT:Apple/VisHiRes.cs"],
+"ProjectSyms":{
+"BAS_ERRNUM":{
+"DataDescriptor":{
+"Length":1,
+"Format":"NumericLE",
+"SubFormat":"Hex",
+"SymbolRef":null},
+
+"Comment":"",
+"HasWidth":false,
+"Direction":"ReadWrite",
+"MultiMask":null,
+"Label":"BAS_ERRNUM",
+"Value":222,
+"Source":"Project",
+"Type":"ExternalAddr",
+"LabelAnno":"None"},
+
+"BAS_HANDLERR":{
+"DataDescriptor":{
+"Length":1,
+"Format":"NumericLE",
+"SubFormat":"Hex",
+"SymbolRef":null},
+
+"Comment":"routine to handle errors if onerr goto active",
+"HasWidth":false,
+"Direction":"ReadWrite",
+"MultiMask":null,
+"Label":"BAS_HANDLERR",
+"Value":62185,
+"Source":"Project",
+"Type":"ExternalAddr",
+"LabelAnno":"None"}}},
+
+"AddressMap":[{
+"Offset":0,
+"Addr":2048}],
+"TypeHints":[{
+"Low":0,
+"High":0,
+"Hint":"Code"},
+
+{
+"Low":747,
+"High":747,
+"Hint":"Code"}],
+"StatusFlagOverrides":{
+},
+
+"Comments":{
+"9":"get current slot number*16",
+"15":"set default slot",
+"19":"get current drive number",
+"21":"set default drive",
+"24":"30 byte filename",
+"28":"clear filename",
+"47":"first arg char cannot be a digit",
+"65":"always",
+"73":"stop after 30 bytes",
+"75":"and look for slot/drive",
+"82":"it is a digit",
+"106":"slot, e.g. S6",
+"115":"use specified slot instead of the default",
+"121":"drive, e.g. D1",
+"130":"ensure drive 1 or 2",
+"142":"why initialize this to zero",
+"149":"$01 (relocate) in normal operation",
+"155":"setup FM to read 1 byte at current filepos",
+"161":"\u003corg",
+"166":"\u003eorg",
+"168":"\u003clen (ignored)",
+"171":"\u003elen (ignored)",
+"174":"in HRCG, $00",
+"177":"length of module code",
+"180":"in HRCG, $08",
+"192":"load at HIMEM - module_len",
+"201":"passed from RBOOT",
+"209":"enough space, rload_end \u003c load_addr",
+"211":"not enough memory, error $0E",
+"213":"close the open relocatable file",
+"216":"set onerr number",
+"218":"restore stack",
+"221":"handle onerr condition",
+"234":"load_addr - module_org = relocation delta",
+"272":"file_end = adrs + module_len",
+"279":"clobbers some_params, but it was stored in L0B8C",
+"289":"start at ADRS",
+"301":"read 1 byte",
+"314":"read until file_end",
+"320":"read next byte",
+"322":"done reading, are we relocating?",
+"325":"relocate loaded module",
+"327":"no relocation, return ADRS to BASIC",
+"332":"now used as a temp reloc_addr arg",
+"338":"byte 1",
+"344":"\u003cindex into file (?) -- byte 2",
+"351":"\u003cindex into file in memory",
+"353":"preserve adc carry thru jsr",
+"354":"\u003eindex into file (?) -- byte 3",
+"357":"restore carry",
+"361":"\u003eindex into file in memory",
+"365":"mask $ff sets Z flag if byte is zero",
+"367":"update Z, N, V",
+"370":"end on 0 byte. file length ignored.",
+"372":"if byte bit 7 set",
+"374":"if byte bit 6 set",
+"376":"flag byte is $01..$3F",
+"378":"read low byte only",
+"381":"relocate it (high byte don\u0027t care)",
+"387":"write only low byte back",
+"389":"discard byte 4",
+"395":"flag byte is $40-$7F",
+"397":"read low byte to reloc high byte",
+"403":"read byte 4 to reloc low byte",
+"406":"relocate",
+"412":"and write reloc high byte back",
+"419":"test bit 5",
+"422":"bit 5 set -- big-endian address",
+"424":"entry type is $8x or $9x",
+"426":"store address in bytes 2-3 in module_len temp",
+"435":"relocate the temp address",
+"441":"and write it back to the file",
+"443":"(read index 0,1 and write index 1,0)",
+"449":"discard byte 4",
+"455":"$Ax, $Bx .. $Fx",
+"457":"read low address byte into high reloc byte",
+"463":"and high addr byte into low reloc byte",
+"466":"relocate little-endian address",
+"472":"write low reloc byte into high byte",
+"475":"write high reloc byte into low byte",
+"480":"discard byte 4",
+"499":"float signed int in A,Y",
+"541":"save X/Y",
+"546":"overwrites $fb",
+"549":"copy filename into DOS buffer",
+"554":"note: this is actually the buffer filename pointer now",
+"559":"get FM param list location into fm_params",
+"570":"clear local FM param list",
+"576":"push 6 bytes $1e-$23 on the stack",
+"578":"from the free DOS buffer",
+"586":"pull 6 bytes from stack",
+"589":"and copy to $0C-$11 of local FM params",
+"595":"OPEN",
+"600":"N/A",
+"605":"record length 1",
+"627":"B (binary) type",
+"632":"lda #\u003cfilename",
+"638":"lda #\u003efilename",
+"644":"do not create file if missing",
+"646":"open the file",
+"649":"restore A/X/Y",
+"655":"save X and Y",
+"659":"CLOSE",
+"667":"get file manager workarea buffer",
+"671":"plus $2D bytes for filename entry",
+"675":"and save it for writing into",
+"682":"write 0 into filename entry (buf+$200+$2D)",
+"687":"restore X and Y",
+"692":"preserve A/Y",
+"702":"$9D00 is first link in chain",
+"704":"always. BIT would save 1 byte",
+"706":"address of next buffer ($22D + $24 = $251)",
+"708":"get low byte of next filename address",
+"712":"...get high byte",
+"714":"redundant instruction",
+"716":"high byte zero, no more buffers; error",
+"718":"set dos_addr to the address of the first buffer",
+"725":"get first filename byte",
+"727":"non-zero, buffer occupied",
+"733":"no buffers available",
+"738":"save A/X/Y",
+"745":"always -- unused entry point ahead",
+"754":"READ (03)",
+"759":"subcode: read 1 byte",
+"764":"unused",
+"767":"unused",
+"770":"unused",
+"773":"unused",
+"778":"1 byte",
+"786":"restore A/X/Y",
+"803":"The byte that was read",
+"814":"copy $16 (22) bytes into DOS FM",
+"822":"call DOS file manager",
+"827":"copy $16 bytes back",
+"835":"byte 0A = return code",
+"840":"X=non-zero return code",
+"844":"restore X/Y and return",
+"845":"after successful FM call",
+"850":"make this look like code with BIT",
+"851":"so this address is relocated",
+"854":"$16 byte uninitialized FM param data",
+"865":"byte $0B unused",
+"875":"end of fm param list?",
+"876":"load module from this slot",
+"877":"load module from this drive",
+"878":"30 byte filename",
+"908":"relocation delta",
+"910":"code length and (later) a temp",
+"912":"module address returned to BASIC",
+"914":"whether to relocate; initialized to 1",
+"915":"current relocation entry type"},
+
+"LongComments":{
+"-2147483647":{
+"Text":"RLOAD is the second link in the RBOOT -\u003e RLOAD -\u003e MODULE chain. RBOOT places RLOAD in low memory in free heap space just after BASIC variables, relocates any 16-bit address operands, and sets the BASIC USR() vector to point to it.\r\n\r\nRLOAD is called via ADRS=USR(0),\"MODULE[,Sn,Dn]\" and loads relocatable module MODULE just under HIMEM, relocating it and returning its address. HIMEM is also updated to protect it.\r\n\r\nRLOAD relocation is much more sophisticated than RBOOT, which effectively disassembles code and looks for 16-bit address operands that appear to point to its own code. RLOAD relies on a relocation table generated at assembly time, which points to every operand to be relocated, and even works on 8-bit immediate HI/LO bytes.\r\n\r\nOnce finished, RLOAD itself is expendable and may be overwritten by variable or string allocation.\r\n\r\nAnalysis by Jim Ursetto with 6502bench SourceGen v1.7.3",
+"BoxMode":true,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"67":{
+"Text":"Copy filename, ending in a comma, quote or end of line.\r\nIf a comma is encountered, parse slot (Sn) and/or drive (Dn) arg.\r\n",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"92":{
+"Text":"discard rest of argument, until comma/eol",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"522":{
+"Text":"Parse a number 1-7, returning $01-$07 in A. Carry set on parse error.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"47":{
+"Text":"The USR arg list must start with a quoted filename, but can optionally be preceded by any number of commas. The filename may end in a quote or just EOL. All spaces are ignored, so the filename on disk cannot contain any. A slot and/or drive arg is accepted (with the numeric value being range-checked) and if specified multiple times, the last takes effect. Junk after the slot/drive number is ignored. Other args are disallowed.\r\n\r\nAccepted examples:\r\nUSR(0)\"HRCG\"                -\u003e HRCG, current slot \u0026 drive\r\nUSR(0)\"HRCG, S6, D1\"        -\u003e HRCG, slot 6, drive 1\r\nUSR(0)\"H R C G,S6\"          -\u003e HRCG, slot 6\r\nUSR(0),,,\"HRCG,S6FOO,D2BAZ  -\u003e HRCG, slot 6, drive 2\r\nUSR(0),\"HRCG,S6,S7,D1,D2\"   -\u003e HRCG, slot 7, drive 2\r\n\r\nDisallowed examples:\r\nUSR(0),HRCG                 -\u003e no open quote\r\nUSR(0),\"HRCG,,S6\"           -\u003e empty arg\r\nUSR(0),\"HRCG,S6,\"           -\u003e empty arg\r\nUSR(0),\"HRCG,S8\"            -\u003e illegal slot number\r\nUSR(0),\"HRCG,D3\"            -\u003e illegal drive number",
+"BoxMode":true,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"101":{
+"Text":"Parse slot (Sn) n=1..7 and drive (Dn) n=1..2. Extraneous chars until the next comma or EOL are ignored, e.g. \"NAME,S6FOOBAR,D2BAZ\" parses. ",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"792":{
+"Text":"Call DOS FM, assuming you already set up a 1-byte READ call (setup_read_1byte), and returns the byte in A.\r\nPreserves X/Y.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"655":{
+"Text":"Close the file represented by fm_param_data. As per API, write 0 into the first byte of the filename entry to mark it unused.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"213":{
+"Text":"Close and exit with error. Input: X=errno.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"807":{
+"Text":"Copy our local FM block (fm_param_data) into DOS, call DOS FM, then copy the result back. Exits via ONERR if FM returned non-zero.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"853":{
+"Text":"End point of relocation scan -- zero byte",
+"BoxMode":true,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"632":{
+"Text":"Using ptr_to_filename lets us get the relocated address of filename, whereas loading an immediate LO and HI byte would not.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"850":{
+"Text":"Relocation trick: only 16-bit code operands are relocated, so make this look like one by prefixing it with a BIT opcode. This gives us the relocated address of filename so we can pass it to DOS. 8-bit immediate operands (lda #\u003cfilename) can\u0027t be relocated, but an 8-bit dereference of a 16-bit operand (lda ptr_to_filename) can. Note that both the contents of this variable, and the variable reference itself, are relocated.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"541":{
+"Text":"Opens \u0027filename\u0027, acquiring a free DOS buffer. buf_fn_ptr and fm_param_data are updated accordingly.\r\nA/X/Y are preserved.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"576":{
+"Text":"Copy the matching values from the DOS buffer (directly after the filename entry at $00-$1d) into the local FM param list: file manager workarea buffer (0C/0D), T/S sector buffer (0E/0F), and data sector buffer (10/11).",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"595":{
+"Text":"Set up the rest of the OPEN call parameters.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"738":{
+"Text":"Set up fm_param_data to READ 1 byte at the current file position. Byte returned at param offset $08.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"486":{
+"Text":"Set HIMEM to ADRS (the starting address of the module), and return ADRS from USR(0) as a floating point value, continuing on the interpreter.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"695":{
+"Text":"This locates DOS. In the tiny DOS_LOCFPL subroutine at $3DC, there is a LDA $9D0F, where \"9D\" (at $3DE) is changed by DOS to match its load address. (Ex: $9D00 on 48K+ machines, $3D00 on 24K, $1D00 on 16K.) $9D0E/F is always +$0E into DOS and is a well-known constant holding the address of the FM param list. Although there are other vectors in the $3D0 list, they were not guaranteed to point to the first page of DOS.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"706":{
+"Text":"Follow the chain of DOS buffers to find a free one. The chain starts at $9D00, pointing to the filename entry in the first buffer. Subsequent filename pointers are at filename + $24. Note the clever use of the #$00 index for $9D00 followed by #$24 thereafter.\r\n\r\nbufptr = $9D00\r\nn = 0\r\ndo {\r\n bufptr = *(bufptr+n)\r\n if (!bufptr) { error }   // no more buffers\r\n if (!*bufptr) { return } // found free buffer\r\n n = $24\r\n}\r\n\r\nBuffer format:\r\n$9d00: ptr to filename entry in first buffer\r\nbuf: the DOS buffer\r\nbuf+$22d: filename entry (null bytes if unused)\r\nbuf+$22d+$24: ptr to filename entry in next buffer",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"692":{
+"Text":"Find the first free DOS buffer and return a pointer to it (its filename entry, as is standard) in $FB. Preserves A/Y and exits ONERR if no buffers available.\r\n",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"244":{
+"Text":"In normal operation, this sets the file\u0027s load address to the start address in high memory. But if const_one is set to zero, the load address is set to the module\u0027s ORG. some_params is set to end of file in both cases (i.e. offset +worklen). In other words, 0 seems to disable relocation.\r\n\r\nThere\u0027s some redundancy here to support both modes. Simplified:\r\n\r\nadrs = load_addr\r\nsome_params = worklen + load_addr\r\nload_addr = adrs\r\n----\r\nadrs = some_params ;org\r\nsome_params = worklen + some_params\r\nload_addr = adrs",
+"BoxMode":true,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"140":{
+"Text":"$fb changes meanings a few times. First it is RWTS IOB, then it is the module ORG (load address from file), and finally it points to the end of relocated file in memory.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"272":{
+"Text":"Compute end address of relocated file in memory, and store it in $fb (which changes meaning yet again).",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"174":{
+"Text":"Relocatable modules have an extra 2 bytes at the beginning, before the code starts. In HRCG, this is $00 $08. This is the 16-bit length of the module code, with the remainder a relocation table.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"502":{
+"Text":"Relocate the address in module_len in place by adding the relocation delta.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"289":{
+"Text":"Load the file into memory 1 byte at a time at ADRS, which is not particularly fast. Stops when address file_end is reached.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"455":{
+"Text":"Same as reloc_addr, but the address to relocate is byte-swapped (big-endian). Swap when reading so we can relocate it, but write it back in big-endian order.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"376":{
+"Text":"This entry type has bit 6 and 7 clear and is non-zero.\r\n\r\nRelocate 8-bit address. The high byte of the result is discarded so this wraps around at $FF. This can be used in conjunction with reloc_hi to relocate a 16-bit address split across non-consecutive bytes -- see below.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"395":{
+"Text":"Relocate an 8-bit value, treated as the high byte of an address. The low byte is taken from byte 4 of the entry, not from the code. After relocation the high byte is written back and the low byte discarded (but may have impacted the high byte via carry).\r\n\r\nThis can be used in tandem with reloc_lo to relocate a 16-bit value split into two parts. For example, to relocate VAR ($8E75) in\r\n\r\n  LDA #$75   ; #\u003cVAR\r\n  STA $38\r\n  LDA #$8E   ; #\u003eVAR\r\n  STA $39\r\n\r\nyou would reloc_lo the byte $75, and then reloc_hi the byte $8E, with the low byte (entry byte 4) set to $75. The assembler knows that this is a split address and can remember the low byte when creating the reloc_hi entry.\r\n\r\nSimilarly, this could relocate a jump table with low bytes on one page and high bytes on another.",
+"BoxMode":true,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"330":{
+"Text":"Process the relocation table entries present at the end of the module code. Each entry is 4 bytes long: an 8-bit entry type, a 16-bit code offset, and a final byte as argument or ignored. At each offset we find and relocate a 16-bit address, or an 8-bit address representing the low or high byte of an address.\r\n\r\n81 YY XX 00: Relocate 16-bit address $HHLL at offset +$XXYY\r\n41 YY XX NN: Relocate  8-bit hi byte $HHNN at offset +$XXYY\r\n01 YY XX 00: Relocate  8-bit lo byte $00LL at offset +$XXYY\r\nA1 YY XX 00: Relocate 16-bit address $LLHH at offset +$XXYY\r\n00: End table\r\n\r\nOnly bits 7, 6 and 5 of the entry type are significant in RLOAD, so $90 should work the same as $81, but types in the wild seem to use the canonical forms above. (I have not observed $A1 in use.)\r\n\r\nNote: The table starts in the file at module_len bytes after the start of code. B-type files have a 4-byte header and R-type files have a 6 byte header, so if examining a module in a non-relocation-aware way (such as plain BLOAD), the table appears to start 2 bytes later than expected ($9602 in HRCG).",
+"BoxMode":true,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"854":{
+"Text":"The variable values below are placeholders, initialized during execution.\r\n\r\nFM param lists are $12 bytes long, while this area is $16. I\u0027m not sure why. The last 4 bytes are initialized to zero.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"417":{
+"Text":"Relocate a 16-bit address. The offset of the address in the module code is taken from bytes 2 (low) and 3 (high). Byte 4 is ignored. The 16-bit address at this offset is relocated in place. If bit 5 is set, the address to relocate is big-endian.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"812":{
+"Text":"Copies $16 bytes, though FM blocks are nominally $12 bytes long. The last 4 bytes were zeroed.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"747":{
+"Text":"This is unused, but if you were to enter here, it would set up fm_param_data to WRITE 1 byte instead of READ.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"146":{
+"Text":"It\u0027s possible \"inc reloc_flag\" is conditionally assembled; if present, as here, the flag is 1 and relocation is enabled.\r\n(It would be shorter to lda #0/#1 + sta instead of sta+inc.)",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"229":{
+"Text":"Compute relocation delta if relocation enabled.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"249":{
+"Text":"Relocation enabled; module loads at relocated addr near HIMEM.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"262":{
+"Text":"Relocation disabled; module loads at its ORG (file address).",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"627":{
+"Text":"This is not R (relocatable) type $08, but it doesn\u0027t matter: this value is ignored unless creating the file. The type of the OPENed file is returned in byte 7, but we never check it.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0}},
+
+"Notes":{
+"376":{
+"Text":"Below, module_len is reused as a temporary subroutine argument to reloc_addr. It is an address to relocate, no longer the module length. But we can\u0027t rename it in the disassembly as it isn\u0027t a local variable.\r\n",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"655":{
+"Text":"Here buf_fn_ptr is computed as the FM work area (buf+$200) + $2D, which happens to be same as the filename entry (buf+$22D). It\u0027s possible this is already set correctly on entry.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0}},
+
+"UserLabels":{
+"876":{
+"Label":"slot",
+"Value":2924,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"0":{
+"Label":"usr_entry",
+"Value":2048,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"877":{
+"Label":"drive",
+"Value":2925,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"878":{
+"Label":"filename",
+"Value":2926,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"28":{
+"Label":"clear_fn",
+"Value":2076,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"92":{
+"Label":"discard_to_comma",
+"Value":2140,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"140":{
+"Label":"end_of_args",
+"Value":2188,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"101":{
+"Label":"parse_slot",
+"Value":2149,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"121":{
+"Label":"parse_drive",
+"Value":2169,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"216":{
+"Label":"onerr",
+"Value":2264,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"39":{
+"Label":"error_0b",
+"Value":2087,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"42":{
+"Label":"error_02",
+"Value":2090,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"47":{
+"Label":"parse_args",
+"Value":2095,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"59":{
+"Label":"demand_quote",
+"Value":2107,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"37":{
+"Label":"parse_begin",
+"Value":2085,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"67":{
+"Label":"copy_fn_char",
+"Value":2115,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"77":{
+"Label":"copy_filename",
+"Value":2125,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"539":{
+"Label":"parse_err",
+"Value":2587,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"522":{
+"Label":"parse_1_thru_7",
+"Value":2570,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"814":{
+"Label":"copy_to_fm",
+"Value":2862,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"827":{
+"Label":"copy_from_fm",
+"Value":2875,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"854":{
+"Label":"fm_param_data",
+"Value":2902,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"807":{
+"Label":"call_fm_with_data",
+"Value":2855,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"844":{
+"Label":"done",
+"Value":2892,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"655":{
+"Label":"close_fm",
+"Value":2703,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"213":{
+"Label":"close_onerr",
+"Value":2261,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"851":{
+"Label":"ptr_to_filename",
+"Value":2899,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"570":{
+"Label":"clear_fm_data",
+"Value":2618,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"578":{
+"Label":"push_byte",
+"Value":2626,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"588":{
+"Label":"copy_byte",
+"Value":2636,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"551":{
+"Label":"copy_fn",
+"Value":2599,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"733":{
+"Label":"error",
+"Value":2781,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"754":{
+"Label":"cont",
+"Value":2802,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"738":{
+"Label":"setup_read_1byte",
+"Value":2786,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"792":{
+"Label":"call_fm_get_byte",
+"Value":2840,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"541":{
+"Label":"open_file",
+"Value":2589,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"910":{
+"Label":"module_len",
+"Value":2958,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"224":{
+"Label":"cont",
+"Value":2272,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"914":{
+"Label":"reloc_flag",
+"Value":2962,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"915":{
+"Label":"entry_type",
+"Value":2963,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"486":{
+"Label":"return_adrs",
+"Value":2534,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"912":{
+"Label":"adrs",
+"Value":2960,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"312":{
+"Label":"nowrap",
+"Value":2360,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"706":{
+"Label":"next_buffer",
+"Value":2754,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"692":{
+"Label":"find_free_buffer",
+"Value":2740,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"708":{
+"Label":"get_fn_entry",
+"Value":2756,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"718":{
+"Label":"check_free",
+"Value":2766,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"502":{
+"Label":"reloc_addr",
+"Value":2550,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"908":{
+"Label":"reloc_delta",
+"Value":2956,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"301":{
+"Label":"read_byte",
+"Value":2349,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"262":{
+"Label":"no_reloc",
+"Value":2310,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"272":{
+"Label":"compute_end",
+"Value":2320,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"330":{
+"Label":"relocate",
+"Value":2378,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"417":{
+"Label":"reloc_addr",
+"Value":2465,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"455":{
+"Label":"reloc_addr_swap",
+"Value":2503,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"395":{
+"Label":"reloc_hi",
+"Value":2443,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"376":{
+"Label":"reloc_lo",
+"Value":2424,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"747":{
+"Label":"setup_write_1byte",
+"Value":2795,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"}},
+
+"OperandFormats":{
+"26":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"HighAscii",
+"SymbolRef":null},
+
+"49":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Ascii",
+"SymbolRef":null},
+
+"59":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Ascii",
+"SymbolRef":null},
+
+"84":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Ascii",
+"SymbolRef":null},
+
+"88":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Ascii",
+"SymbolRef":null},
+
+"97":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Ascii",
+"SymbolRef":null},
+
+"106":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Ascii",
+"SymbolRef":null},
+
+"121":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Ascii",
+"SymbolRef":null},
+
+"221":{
+"Length":3,
+"Format":"NumericLE",
+"SubFormat":"Symbol",
+"SymbolRef":{
+"Label":"BAS_HANDLERR",
+"Part":"Low"}},
+
+"527":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Ascii",
+"SymbolRef":null},
+
+"531":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Ascii",
+"SymbolRef":null},
+
+"695":{
+"Length":3,
+"Format":"NumericLE",
+"SubFormat":"Symbol",
+"SymbolRef":{
+"Label":"DOS_LOCFPL",
+"Part":"Low"}},
+
+"851":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Symbol",
+"SymbolRef":{
+"Label":"filename",
+"Part":"Low"}},
+
+"854":{
+"Length":22,
+"Format":"Dense",
+"SubFormat":"None",
+"SymbolRef":null},
+
+"876":{
+"Length":1,
+"Format":"NumericLE",
+"SubFormat":"None",
+"SymbolRef":null},
+
+"877":{
+"Length":1,
+"Format":"NumericLE",
+"SubFormat":"None",
+"SymbolRef":null},
+
+"878":{
+"Length":30,
+"Format":"Dense",
+"SubFormat":"None",
+"SymbolRef":null},
+
+"908":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"None",
+"SymbolRef":null},
+
+"910":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"None",
+"SymbolRef":null},
+
+"912":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"None",
+"SymbolRef":null}},
+
+"LvTables":{
+"0":{
+"Variables":[{
+"DataDescriptor":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Hex",
+"SymbolRef":null},
+
+"Comment":"passed from RBOOT; end of our own code",
+"HasWidth":true,
+"Direction":"ReadWrite",
+"MultiMask":null,
+"Label":"rload_end",
+"Value":6,
+"Source":"Variable",
+"Type":"ExternalAddr",
+"LabelAnno":"None"},
+
+{
+"DataDescriptor":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Hex",
+"SymbolRef":null},
+
+"Comment":"ptr to DOS FM param list",
+"HasWidth":true,
+"Direction":"ReadWrite",
+"MultiMask":null,
+"Label":"fm_params",
+"Value":249,
+"Source":"Variable",
+"Type":"ExternalAddr",
+"LabelAnno":"None"},
+
+{
+"DataDescriptor":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Hex",
+"SymbolRef":null},
+
+"Comment":"ptr to RWTS parameter list",
+"HasWidth":true,
+"Direction":"ReadWrite",
+"MultiMask":null,
+"Label":"rwts_iob",
+"Value":251,
+"Source":"Variable",
+"Type":"ExternalAddr",
+"LabelAnno":"None"},
+
+{
+"DataDescriptor":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Hex",
+"SymbolRef":null},
+
+"Comment":"relocated module load address",
+"HasWidth":true,
+"Direction":"ReadWrite",
+"MultiMask":null,
+"Label":"load_addr",
+"Value":253,
+"Source":"Variable",
+"Type":"ExternalAddr",
+"LabelAnno":"None"}],
+"ClearPrevious":false},
+
+"140":{
+"Variables":[{
+"DataDescriptor":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Hex",
+"SymbolRef":null},
+
+"Comment":"unrelocated org (addr) of module",
+"HasWidth":true,
+"Direction":"ReadWrite",
+"MultiMask":null,
+"Label":"module_org",
+"Value":251,
+"Source":"Variable",
+"Type":"ExternalAddr",
+"LabelAnno":"None"}],
+"ClearPrevious":false},
+
+"272":{
+"Variables":[{
+"DataDescriptor":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Hex",
+"SymbolRef":null},
+
+"Comment":"end of module in memory",
+"HasWidth":true,
+"Direction":"ReadWrite",
+"MultiMask":null,
+"Label":"file_end",
+"Value":251,
+"Source":"Variable",
+"Type":"ExternalAddr",
+"LabelAnno":"None"}],
+"ClearPrevious":false},
+
+"289":{
+"Variables":[{
+"DataDescriptor":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Hex",
+"SymbolRef":null},
+
+"Comment":"used for indexing into module; was load_addr",
+"HasWidth":true,
+"Direction":"ReadWrite",
+"MultiMask":null,
+"Label":"file_addr",
+"Value":253,
+"Source":"Variable",
+"Type":"ExternalAddr",
+"LabelAnno":"None"}],
+"ClearPrevious":false},
+
+"541":{
+"Variables":[{
+"DataDescriptor":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Hex",
+"SymbolRef":null},
+
+"Comment":"",
+"HasWidth":true,
+"Direction":"ReadWrite",
+"MultiMask":null,
+"Label":"buf_fn_ptr",
+"Value":251,
+"Source":"Variable",
+"Type":"ExternalAddr",
+"LabelAnno":"None"}],
+"ClearPrevious":false},
+
+"695":{
+"Variables":[{
+"DataDescriptor":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Hex",
+"SymbolRef":null},
+
+"Comment":"address of ptr to DOS buffer (filename)",
+"HasWidth":true,
+"Direction":"ReadWrite",
+"MultiMask":null,
+"Label":"buf_fn_ptr",
+"Value":251,
+"Source":"Variable",
+"Type":"ExternalAddr",
+"LabelAnno":"None"}],
+"ClearPrevious":false}},
+
+"Visualizations":[],
+"VisualizationAnimations":[],
+"VisualizationSets":{
+},
+
+"RelocList":{
+},
+
+"DbrValues":{
+}}

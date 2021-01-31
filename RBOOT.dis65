@@ -109,6 +109,23 @@
 "Value":3,
 "Source":"Project",
 "Type":"Constant",
+"LabelAnno":"None"},
+
+"MON_LENGTH":{
+"DataDescriptor":{
+"Length":1,
+"Format":"NumericLE",
+"SubFormat":"Hex",
+"SymbolRef":null},
+
+"Comment":"output of MON_INSDS2",
+"HasWidth":false,
+"Direction":"ReadWrite",
+"MultiMask":null,
+"Label":"MON_LENGTH",
+"Value":47,
+"Source":"Project",
+"Type":"ExternalAddr",
 "LabelAnno":"None"}}},
 
 "AddressMap":[{
@@ -122,6 +139,11 @@
 },
 
 "Comments":{
+"3":"end of RLOAD, rounded up to next page",
+"4":"ORG of RLOAD (as found in file address)",
+"6":"length of RLOAD",
+"8":"intermediate copy of USR vector",
+"10":"end of relocated RLOAD in memory",
 "45":"address of RWTS IOB",
 "51":"slot*16",
 "57":"push slot number",
@@ -162,23 +184,42 @@
 "267":"add $200 to BAS_STREND",
 "269":"STREND+$101 \u003c= usrvec \u003c= STREND+$200",
 "273":"restore high byte of filelen",
-"277":"memtop = usrvec + filelen",
+"277":"rload_end = usrvec + filelen",
 "280":"#\u003eusrvec",
 "282":"load address high byte",
-"287":"Ensure memtop \u003c HIMEM",
+"287":"Ensure rload_end lies under HIMEM",
 "298":"program does not fit, bail",
-"307":"???",
 "330":"Return to BASIC",
 "331":"set errno",
 "336":"Restore BASIC stack pointer",
 "339":"handle ONERR (bypasses stack/errno set)",
 "348":"falls through",
-"381":"exit loop",
+"357":"usrvec low byte is implicitly 0",
+"360":"store usrvec in 16-bit temporary",
+"362":"... for scan start address",
+"367":"high byte of length",
+"370":"add 1 page for BCS below",
+"371":"page of usrvec+fileaddr+filelen+1",
+"374":"next page after end of RLOAD",
+"379":"get opcode",
+"381":"exit on first zero opcode (BRK)",
+"383":"compute operand length",
+"386":"output of INSDS2",
+"388":"look for a two-byte operand (address)",
+"392":"get operand high byte",
+"394":"are we \u003e the last RLOAD page (\u003e= RLOAD+1)",
+"397":"yes, skip relocation",
+"399":"are we \u003c the lowest RLOAD page?",
+"402":"yes, skip relocation",
+"408":"*operand += usrvec page",
+"411":"*operand -= fileaddr page",
+"417":"add opcode len (1)",
+"418":"and operand len (A) to code ptr",
 "429":"always"},
 
 "LongComments":{
 "-2147483647":{
-"Text":"Disassembly of RBOOT, the DOS Toolkit relocatable loader boot shim, as described in \"Applesoft Tool Kit\" on ch.4 pg.29 -- which see for usage\r\ninformation. This is used to load Apple\u0027s relocatable Hi-Res Character Generator (HRCG).\r\n\r\nThis bloads at $208 and, after a CALL 520, itself bloads RLOAD into free space around 1-2 pages above BASIC variables, then points the USR vector there. There is enough padding to let you allocate some simple variables without clobbering RLOAD before you can use it. You can then load relocatable modules (file type R) by calling RLOAD via USR(0).\r\n\r\nNot documented there: you can load a different binary file (instead of RLOAD) by quoting it after the call: CALL 520\"RLOAD2\". That could be left over from the development process.\r\n\r\nDisasm by Jim Ursetto https://github.com/ursetto with 6502bench SourceGen.",
+"Text":"Disassembly of RBOOT, the DOS Toolkit relocatable loader boot shim, as described in \"Applesoft Tool Kit\" on ch.4 pg.29. This is used to load Apple\u0027s relocatable Hi-Res Character Generator (HRCG).\r\n\r\nThis BLOADS at $208 and, after a CALL 520, itself loads RLOAD into free space around 1-2 pages above BASIC variables, then points the USR vector there. There is enough padding to let you allocate some simple variables without clobbering RLOAD before you can use it. You can then load relocatable modules (file type R) by calling RLOAD via USR(0).\r\n\r\nRBOOT\u0027s relocation method is simple but clever. It disassembles RLOAD with monitor routines to find 16-bit operands, which must be addresses on a 6502. If the address is within the module (per the file header address and length) it is relocated. If not--e.g. an Applesoft call--it is left alone. This can\u0027t relocate 8-bit low or high address immediates, and only works on code (not data) but RLOAD is written with this in mind. RLOAD even uses the BIT operand once to disguise a data address as code.\r\n\r\nNot documented: you can load a different binary file (instead of RLOAD) by quoting it after the call: CALL 520\"RLOAD2\". That could be left over from the development process.\r\n\r\nDisasm by Jim Ursetto https://github.com/ursetto with 6502bench SourceGen.",
 "BoxMode":true,
 "MaxWidth":80,
 "BackgroundColor":0},
@@ -214,7 +255,7 @@
 "BackgroundColor":0},
 
 "301":{
-"Text":"The program fits in memory, so load it and update BASIC\u0027s USR vector with our temporary usrvec.\r\n",
+"Text":"The program fits in memory, so load it, relocate it, and update BASIC\u0027s USR vector with our temporary usrvec. File operations here are not checked for error.\r\n",
 "BoxMode":false,
 "MaxWidth":80,
 "BackgroundColor":0},
@@ -223,20 +264,34 @@
 "Text":"Round STREND down to the nearest page and add $200, setting usrvec (our load address and USR vector) to $101 - $200 bytes past the start of Applesoft free space. (The layout is PROGRAM, VARS, ARRAYS, FREE, STRINGS, with strings growing down from HIMEM, so STREND is the end of array variable data and the start of free space.) usrvec temporarily holds the USR vector until we confirm the program will fit.",
 "BoxMode":false,
 "MaxWidth":80,
+"BackgroundColor":0},
+
+"404":{
+"Text":"To each 16-bit address operand, add the usrvec page - fileaddr page to get the relocated page. The lower byte is ignored, as both the file and usrvec are page-aligned.\r\n",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"357":{
+"Text":"Relocate RLOAD. Scan the RLOAD area with monitor disassembly routines to find 16-bit operands (addresses), and if they are internal to RLOAD, relocate them. We can identify internal addresses because they are between the ORG of RLOAD (fileaddr) and its end (+filelen). Scan ends when a BRK is encountered. Note: the org and usrvec are always page-aligned, and the end is rounded up to the next page.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"320":{
+"Text":"Stash rload_end in a safe place in zero page. This will be used shortly by RLOAD to verify it won\u0027t clobber itself when loading the relocatable module.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"42":{
+"Text":"param_list ($06/$07) is also used to pass rload_end to RLOAD.",
+"BoxMode":false,
+"MaxWidth":80,
 "BackgroundColor":0}},
 
 "Notes":{
-"301":{
-"Text":"It\u0027s not clear the file read/close is checked for error.",
-"BoxMode":false,
-"MaxWidth":80,
-"BackgroundColor":-256},
-
-"357":{
-"Text":"TODO\r\n",
-"BoxMode":false,
-"MaxWidth":80,
-"BackgroundColor":0}},
+},
 
 "UserLabels":{
 "0":{
@@ -296,7 +351,7 @@
 "LabelAnno":"None"},
 
 "10":{
-"Label":"memtop",
+"Label":"rload_end",
 "Value":530,
 "Source":"User",
 "Type":"GlobalAddr",
@@ -368,6 +423,27 @@
 "4":{
 "Label":"fileaddr",
 "Value":524,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"3":{
+"Label":"rload_bound",
+"Value":523,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"416":{
+"Label":"next_opcode",
+"Value":936,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"357":{
+"Label":"relocate",
+"Value":877,
 "Source":"User",
 "Type":"GlobalAddr",
 "LabelAnno":"None"}},
