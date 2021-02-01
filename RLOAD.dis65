@@ -58,6 +58,23 @@
 "Value":62185,
 "Source":"Project",
 "Type":"ExternalAddr",
+"LabelAnno":"None"},
+
+"rload_end":{
+"DataDescriptor":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Hex",
+"SymbolRef":null},
+
+"Comment":"passed from RBOOT; end of our own code",
+"HasWidth":true,
+"Direction":"ReadWrite",
+"MultiMask":null,
+"Label":"rload_end",
+"Value":6,
+"Source":"Project",
+"Type":"ExternalAddr",
 "LabelAnno":"None"}}},
 
 "AddressMap":[{
@@ -161,9 +178,8 @@
 "541":"save X/Y",
 "546":"overwrites $fb",
 "549":"copy filename into DOS buffer",
-"554":"note: this is actually the buffer filename pointer now",
 "559":"get FM param list location into fm_params",
-"570":"clear local FM param list",
+"570":"clear 16-byte local FM param list",
 "576":"push 6 bytes $1e-$23 on the stack",
 "578":"from the free DOS buffer",
 "586":"pull 6 bytes from stack",
@@ -976,43 +992,55 @@
 
 "854":{
 "Length":22,
-"Format":"Dense",
+"Format":"Junk",
 "SubFormat":"None",
 "SymbolRef":null},
 
 "876":{
 "Length":1,
-"Format":"NumericLE",
+"Format":"Junk",
 "SubFormat":"None",
 "SymbolRef":null},
 
 "877":{
 "Length":1,
-"Format":"NumericLE",
+"Format":"Junk",
 "SubFormat":"None",
 "SymbolRef":null},
 
 "878":{
 "Length":30,
-"Format":"Dense",
+"Format":"Junk",
 "SubFormat":"None",
 "SymbolRef":null},
 
 "908":{
 "Length":2,
-"Format":"NumericLE",
+"Format":"Junk",
 "SubFormat":"None",
 "SymbolRef":null},
 
 "910":{
 "Length":2,
-"Format":"NumericLE",
+"Format":"Junk",
 "SubFormat":"None",
 "SymbolRef":null},
 
 "912":{
 "Length":2,
-"Format":"NumericLE",
+"Format":"Junk",
+"SubFormat":"None",
+"SymbolRef":null},
+
+"914":{
+"Length":1,
+"Format":"Junk",
+"SubFormat":"None",
+"SymbolRef":null},
+
+"915":{
+"Length":1,
+"Format":"Junk",
 "SubFormat":"None",
 "SymbolRef":null}},
 
@@ -1025,45 +1053,30 @@
 "SubFormat":"Hex",
 "SymbolRef":null},
 
-"Comment":"passed from RBOOT; end of our own code",
-"HasWidth":true,
-"Direction":"ReadWrite",
-"MultiMask":null,
-"Label":"rload_end",
-"Value":6,
-"Source":"Variable",
-"Type":"ExternalAddr",
-"LabelAnno":"None"},
-
-{
-"DataDescriptor":{
-"Length":2,
-"Format":"NumericLE",
-"SubFormat":"Hex",
-"SymbolRef":null},
-
-"Comment":"ptr to DOS FM param list",
-"HasWidth":true,
-"Direction":"ReadWrite",
-"MultiMask":null,
-"Label":"fm_params",
-"Value":249,
-"Source":"Variable",
-"Type":"ExternalAddr",
-"LabelAnno":"None"},
-
-{
-"DataDescriptor":{
-"Length":2,
-"Format":"NumericLE",
-"SubFormat":"Hex",
-"SymbolRef":null},
-
 "Comment":"ptr to RWTS parameter list",
 "HasWidth":true,
 "Direction":"ReadWrite",
 "MultiMask":null,
 "Label":"rwts_iob",
+"Value":251,
+"Source":"Variable",
+"Type":"ExternalAddr",
+"LabelAnno":"None"}],
+"ClearPrevious":false},
+
+"140":{
+"Variables":[{
+"DataDescriptor":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Hex",
+"SymbolRef":null},
+
+"Comment":"unrelocated org (addr) of module",
+"HasWidth":true,
+"Direction":"ReadWrite",
+"MultiMask":null,
+"Label":"module_org",
 "Value":251,
 "Source":"Variable",
 "Type":"ExternalAddr",
@@ -1087,25 +1100,6 @@
 "LabelAnno":"None"}],
 "ClearPrevious":false},
 
-"140":{
-"Variables":[{
-"DataDescriptor":{
-"Length":2,
-"Format":"NumericLE",
-"SubFormat":"Hex",
-"SymbolRef":null},
-
-"Comment":"unrelocated org (addr) of module",
-"HasWidth":true,
-"Direction":"ReadWrite",
-"MultiMask":null,
-"Label":"module_org",
-"Value":251,
-"Source":"Variable",
-"Type":"ExternalAddr",
-"LabelAnno":"None"}],
-"ClearPrevious":false},
-
 "272":{
 "Variables":[{
 "DataDescriptor":{
@@ -1122,11 +1116,9 @@
 "Value":251,
 "Source":"Variable",
 "Type":"ExternalAddr",
-"LabelAnno":"None"}],
-"ClearPrevious":false},
+"LabelAnno":"None"},
 
-"289":{
-"Variables":[{
+{
 "DataDescriptor":{
 "Length":2,
 "Format":"NumericLE",
@@ -1152,7 +1144,24 @@
 "SubFormat":"Hex",
 "SymbolRef":null},
 
-"Comment":"",
+"Comment":"ptr to DOS FM parameter list",
+"HasWidth":true,
+"Direction":"ReadWrite",
+"MultiMask":null,
+"Label":"fm_params",
+"Value":249,
+"Source":"Variable",
+"Type":"ExternalAddr",
+"LabelAnno":"None"},
+
+{
+"DataDescriptor":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Hex",
+"SymbolRef":null},
+
+"Comment":"filename pointer in DOS buffer",
 "HasWidth":true,
 "Direction":"ReadWrite",
 "MultiMask":null,

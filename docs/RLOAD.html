@@ -38,6 +38,7 @@
                    *                                                                              *
                    * Analysis by Jim Ursetto with 6502bench SourceGen v1.7.3                      *
                    ********************************************************************************
+                   <a name="Symrload_end">rload_end</a>       .eq     $06    {addr/2}   ;passed from RBOOT; end of our own code
                    <a name="SymBAS_MEMSIZE">BAS_MEMSIZE</a>     .eq     $73    {addr/2}   ;HIMEM (2b)
                    <a name="SymBAS_CHRGET">BAS_CHRGET</a>      .eq     $b1               ;get next character or Applesoft token
                    <a name="SymBAS_CHRGOT">BAS_CHRGOT</a>      .eq     $b7               ;get next, but don't advance TXTPTR
@@ -50,10 +51,7 @@
                    <a name="SymBAS_HANDLERR">BAS_HANDLERR</a>    .eq     $f2e9             ;routine to handle errors if onerr goto active
 
                                    .org    $0800
-                   rload_end       .var    $06    {addr/2}   ;passed from RBOOT; end of our own code
-                   fm_params       .var    $f9    {addr/2}   ;ptr to DOS FM param list
                    rwts_iob        .var    $fb    {addr/2}   ;ptr to RWTS parameter list
-                   load_addr       .var    $fd    {addr/2}   ;relocated module load address
 
 0800: 20 e3 03     <a name="Symusr_entry">usr_entry</a>       jsr     <a href="#SymDOS_LOCRPL">DOS_LOCRPL</a>
 0803: 84 fb                        sty     rwts_iob
@@ -156,6 +154,7 @@
                    ; ORG (load address from file), and finally it points to the end of relocated
                    ; file in memory.
                    module_org      .var    $fb    {addr/2}   ;unrelocated org (addr) of module
+                   load_addr       .var    $fd    {addr/2}   ;relocated module load address
 
 088c: a9 00        <a name="Symend_of_args">end_of_args</a>     lda     #$00
 088e: 85 fd                        sta     load_addr         ;why initialize this to zero
@@ -187,9 +186,9 @@
 08c2: a5 74                        lda     <a href="#SymBAS_MEMSIZE">BAS_MEMSIZE</a>+1
 08c4: ed 8f 0b                     sbc     <a href="#Symmodule_len">module_len</a>+1
 08c7: 85 fe                        sta     load_addr+1
-08c9: a5 06                        lda     rload_end         ;passed from RBOOT
+08c9: a5 06                        lda     <a href="#Symrload_end">rload_end</a>         ;passed from RBOOT
 08cb: c5 fd                        cmp     load_addr
-08cd: a5 07                        lda     rload_end+1
+08cd: a5 07                        lda     <a href="#Symrload_end">rload_end</a>+1
 08cf: e5 fe                        sbc     load_addr+1
 08d1: 90 0d                        bcc     @cont             ;enough space, rload_end &lt; load_addr
 08d3: a2 0e                        ldx     #$0e              ;not enough memory, error $0E
@@ -243,6 +242,7 @@
                    ; Compute end address of relocated file in memory, and store it in $fb (which
                    ; changes meaning yet again).
                    file_end        .var    $fb    {addr/2}   ;end of module in memory
+                   file_addr       .var    $fd    {addr/2}   ;used for indexing into module; was load_addr
 
 0910: ad 8e 0b     @compute_end    lda     <a href="#Symmodule_len">module_len</a>        ;file_end = adrs + module_len
 0913: 18                           clc
@@ -253,8 +253,6 @@
 091f: 85 fc                        sta     file_end+1
                    ; Load the file into memory 1 byte at a time at ADRS, which is not particularly
                    ; fast. Stops when address file_end is reached.
-                   file_addr       .var    $fd    {addr/2}   ;used for indexing into module; was load_addr
-
 0921: ad 90 0b                     lda     <a href="#Symadrs">adrs</a>              ;start at ADRS
 0924: 85 fd                        sta     file_addr
 0926: ad 91 0b                     lda     <a href="#Symadrs">adrs</a>+1
@@ -437,7 +435,8 @@
                    ; Opens 'filename', acquiring a free DOS buffer. buf_fn_ptr and fm_param_data
                    ; are updated accordingly.
                    ; A/X/Y are preserved.
-                   buf_fn_ptr      .var    $fb    {addr/2}
+                   fm_params       .var    $f9    {addr/2}   ;ptr to DOS FM parameter list
+                   buf_fn_ptr      .var    $fb    {addr/2}   ;filename pointer in DOS buffer
 
 0a1d: 48           <a name="Symopen_file">open_file</a>       pha                       ;save X/Y
 0a1e: 98                           tya
@@ -447,7 +446,7 @@
 0a22: 20 b4 0a                     jsr     <a href="#Symfind_free_buffer">find_free_buffer</a>  ;overwrites $fb
 0a25: a0 1d                        ldy     #$1d              ;copy filename into DOS buffer
 0a27: b9 6e 0b     @copy_fn        lda     <a href="#Symfilename">filename</a>,y
-0a2a: 91 fb                        sta     (buf_fn_ptr),y    ;note: this is actually the buffer filename pointer now
+0a2a: 91 fb                        sta     (buf_fn_ptr),y
 0a2c: 88                           dey
 0a2d: 10 f8                        bpl     @copy_fn
 0a2f: 20 dc 03                     jsr     <a href="#SymDOS_LOCFPL">DOS_LOCFPL</a>        ;get FM param list location into fm_params
@@ -455,7 +454,7 @@
 0a34: 85 fa                        sta     fm_params+1
 0a36: a0 15                        ldy     #$15
 0a38: a9 00                        lda     #$00
-0a3a: 99 56 0b     @clear_fm_data  sta     <a href="#Symfm_param_data">fm_param_data</a>,y   ;clear local FM param list
+0a3a: 99 56 0b     @clear_fm_data  sta     <a href="#Symfm_param_data">fm_param_data</a>,y   ;clear 16-byte local FM param list
 0a3d: 88                           dey
 0a3e: 10 fa                        bpl     @clear_fm_data
                    ; Copy the matching values from the DOS buffer (directly after the filename
@@ -693,15 +692,15 @@
                    ; 
                    ; FM param lists are $12 bytes long, while this area is $16. I'm not sure why.
                    ; The last 4 bytes are initialized to zero.
-0b56: a0 c3 a0 a5+ <a name="Symfm_param_data">fm_param_data</a>   .bulk   a0c3a0a597b18dcfa0c8a5f0a0caffa0baa0a090a0a0 ;$16 byte uninitialized FM param data
-0b6c: a0           <a name="Symslot">slot</a>            .dd1    $a0               ;load module from this slot
-0b6d: a0           <a name="Symdrive">drive</a>           .dd1    $a0               ;load module from this drive
-0b6e: f0 ac a0 84+ <a name="Symfilename">filename</a>        .bulk   f0aca084a0a0f0a0a0a0a0a0c5a0b0a2a0a0eda0b1cfa0c38a8da0d399c4 ;30 byte filename
-0b8c: a0 d0        <a name="Symreloc_delta">reloc_delta</a>     .dd2    $d0a0             ;relocation delta
-0b8e: cc a0        <a name="Symmodule_len">module_len</a>      .dd2    $a0cc             ;code length and (later) a temp
-0b90: a0 a0        <a name="Symadrs">adrs</a>            .dd2    $a0a0             ;module address returned to BASIC
-0b92: a0           <a name="Symreloc_flag">reloc_flag</a>      .dd1    $a0               ;whether to relocate; initialized to 1
-0b93: a5           <a name="Symentry_type">entry_type</a>      .dd1    $a5               ;current relocation entry type
+0b56: a0 c3 a0 a5+ <a name="Symfm_param_data">fm_param_data</a>   .junk   22                ;$16 byte uninitialized FM param data
+0b6c: a0           <a name="Symslot">slot</a>            .junk   1                 ;load module from this slot
+0b6d: a0           <a name="Symdrive">drive</a>           .junk   1                 ;load module from this drive
+0b6e: f0 ac a0 84+ <a name="Symfilename">filename</a>        .junk   30                ;30 byte filename
+0b8c: a0 d0        <a name="Symreloc_delta">reloc_delta</a>     .junk   2                 ;relocation delta
+0b8e: cc a0        <a name="Symmodule_len">module_len</a>      .junk   2                 ;code length and (later) a temp
+0b90: a0 a0        <a name="Symadrs">adrs</a>            .junk   2                 ;module address returned to BASIC
+0b92: a0           <a name="Symreloc_flag">reloc_flag</a>      .junk   1                 ;whether to relocate; initialized to 1
+0b93: a5           <a name="Symentry_type">entry_type</a>      .junk   1                 ;current relocation entry type
 </pre>
 
 
@@ -717,7 +716,7 @@
     <div id="footer">
         <hr/>
         <p>HTML generated by <a href="https://6502bench.com/">6502bench SourceGen</a> v1.7.3
-        on 2021/01/30 <!--20:32:48 -06:00--></p>
+        on 2021/01/31 <!--22:14:49 -06:00--></p>
         <p>Expression style: Common</p>
         <!-- parameters: cols=16,8,18,100;extraCols=Address,Bytes;byteSpc=True;commaBulk=False;nonuPfx='@';varPfx='';labelBrk=False;notes=True;gfx=True;opWrap=64 -->
     </div>
