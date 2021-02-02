@@ -1,8 +1,8 @@
 ﻿### 6502bench SourceGen dis65 v1.0 ###
 {
 "_ContentVersion":4,
-"FileDataLength":2810,
-"FileDataCrc32":341690075,
+"FileDataLength":2048,
+"FileDataCrc32":-349897975,
 "ProjectProps":{
 "CpuName":"65C02",
 "IncludeUndocumentedInstr":false,
@@ -297,12 +297,6 @@
 
 "663":{
 "Text":"Set overwrite (\"print\") mode, the default mode, where character bg and fg completely replace underlying graphics.",
-"BoxMode":false,
-"MaxWidth":80,
-"BackgroundColor":0},
-
-"2048":{
-"Text":"This is the RLOAD relocation table. It\u0027s unused by us, but needed to build this from scratch. Note the 2-byte relocation header $00 $08 is not included in this file.",
 "BoxMode":false,
 "MaxWidth":80,
 "BackgroundColor":0},
@@ -719,13 +713,6 @@
 "103":{
 "Label":"lower_case",
 "Value":36455,
-"Source":"User",
-"Type":"GlobalAddr",
-"LabelAnno":"None"},
-
-"2048":{
-"Label":"reloc_table",
-"Value":38400,
 "Source":"User",
 "Type":"GlobalAddr",
 "LabelAnno":"None"},
@@ -1570,12 +1557,6 @@
 
 "2040":{
 "Length":8,
-"Format":"Dense",
-"SubFormat":"None",
-"SymbolRef":null},
-
-"2048":{
-"Length":762,
 "Format":"Dense",
 "SubFormat":"None",
 "SymbolRef":null}},
