@@ -64,12 +64,16 @@
 8e03: 4c 20 8e     <a name="Symhires2_entry">hires2_entry</a>    jmp     <a href="#SymL8E20">L8E20</a>
 
 8e06: 0a           <a name="Symversion">version</a>         .dd1    $0a               ;version number * 10
-8e07: 00                           .dd1    $00
-8e08: 93                           .dd1    $93
+                   ; Poked by the loader to point to the first alternate charset.
+                   ; As this defaults to the builtin charset, both ^A 0 and ^A 1
+                   ; will display the builtin charset if no alternates are loaded.
+8e07: 00 93        <a name="Symfirst_charset">first_charset</a>   .dd2    <a href="#Symbuiltin_charset">builtin_charset</a>
 
-8e09: 4c 48 90     <a name="SymL8E09">L8E09</a>           jmp     <a href="#Symreturn">return</a>
+                   ; Vectors for user subroutines A (^O ^Y) and B (^O ^Z).
+                   ; The user pokes these with the desired addresses.
+8e09: 4c 48 90     <a name="SymuserA">userA</a>           jmp     <a href="#Symreturn">return</a>            ;user subroutine A
 
-8e0c: 4c 48 90     <a name="SymL8E0C">L8E0C</a>           jmp     <a href="#Symreturn">return</a>
+8e0c: 4c 48 90     <a name="SymuserB">userB</a>           jmp     <a href="#Symreturn">return</a>            ;user subroutine B
 
 8e0f: 20 20 8e     <a name="Symstart">start</a>           jsr     <a href="#SymL8E20">L8E20</a>
                    ; Output our banner to hires screen.
@@ -113,8 +117,7 @@
 8e65: 00           <a name="Symoverlay_mode">overlay_mode</a>    .dd1    $00               ;$60 to use second screen for overlay (^O ^T/^R)
 8e66: 00           <a name="Symwrap_mode">wrap_mode</a>       .dd1    $00               ;$FF if wrap mode, $00 if scroll
 8e67: 00           <a name="Symlower_case">lower_case</a>      .dd1    $00               ;$80=lower case, $00=upper
-8e68: 00                           .dd1    $00
-8e69: 93                           .dd1    $93
+8e68: 00 93        <a name="Symactive_charset">active_charset</a>  .dd2    <a href="#Symbuiltin_charset">builtin_charset</a>   ;pointer to active charset
 8e6a: d0 a0 a0 a0+                 .str    ↑“P   L: %”
 8e72: 00           <a name="SymL8E72">L8E72</a>           .dd1    $00
 8e73: 00           <a name="SymL8E73">L8E73</a>           .dd1    $00
@@ -238,9 +241,11 @@
 8f45: 0e 61 8e     @ret            asl     <a href="#Symkey_state">key_state</a>         ;sets carry if contained $80
 8f48: 60                           rts                       ;execute function 00..1b
 
-                   <span style="background-color: #cbcb00">NOTE: Jump table used by previous subroutine (with low byte -1 for RTS</span>
-                   <span style="background-color: #cbcb00">adjustment). We should be able to name these based on the documentation for</span>
-                   <span style="background-color: #cbcb00">control char functions. HRCG uses Ctrl-A ($01) through Ctrl-Z ($1a).</span>
+                   ; Jump table used by previous subroutine to handle control character input (with
+                   ; low byte -1 for RTS adjustment). Function names are based on the toolkit
+                   ; documentation, with the control char ("CB" for ^B) prepended. This is a state
+                   ; machine and a couple chars only have meaning after a ^O; those have e.g. "COR"
+                   ; for ^O ^R prepended.
 8f49: 47 90        <a name="Symfunction_table">function_table</a>  .dd2    <a href="#Symreturn">return</a>-1          ;^@ -- noop
 8f4b: 7e 8f                        .dd2    <a href="#SymCA_select_charset">CA_select_charset</a>-1 ;^A -- select charset
 8f4d: aa 8f                        .dd2    <a href="#SymCB_begin_block">CB_begin_block</a>-1
@@ -275,19 +280,30 @@
 8f83: 8d 61 8e                     sta     <a href="#Symkey_state">key_state</a>
 8f86: 60                           rts
 
+                   ; Process ^A argument, the charset number to activate. Anything other than 1..9
+                   ; selects the builtin charset. 1 selects the lowest charset in memory, 2 selects
+                   ; lowest + $0300, and so on.
+                   ; 
+                   ; There is no further bounds check on the charset number, so if you select
+                   ; charset 4 when 3 are loaded, you will get garbage. (Since LOADHRCG loads
+                   ; charsets directly below HRCG, charset 4 would be HRCG code and charset 5 is
+                   ; $100 into the builtin charset, which effectively shifts uppercase to
+                   ; lowercase!)
+                   temp            .var    $ee    {addr/1}   ;temp for multiply by 3
+
 8f87: e9 31        <a name="Symctrl_a_arg">ctrl_a_arg</a>      sbc     #$31              ;get the digit pressed after ^A
 8f89: c9 09                        cmp     #$09
-8f8b: b0 0d                        bcs     <a href="#SymL8F9A">L8F9A</a>             ;not a digit
-8f8d: ae 07 8e                     ldx     <a href="#Symversion">version</a>+1         ;might be pointer to current charset
-8f90: 85 ee                        sta     $ee
+8f8b: b0 0d                        bcs     @use_internal     ;use internal charset if not 1..9
+8f8d: ae 07 8e                     ldx     <a href="#Symfirst_charset">first_charset</a>     ;X = low byte of lowest charset in memory
+8f90: 85 ee                        sta     temp
 8f92: 0a                           asl     A
-8f93: 65 ee                        adc     $ee
-8f95: 6d 08 8e                     adc     <a href="#Symversion">version</a>+2
-8f98: d0 04                        bne     <a href="#SymL8F9E">L8F9E</a>
-8f9a: a2 00        <a name="SymL8F9A">L8F9A</a>           ldx     #$00              ;$9300 is original value of vector above
-8f9c: a9 93                        lda     #$93              ;so if digit invalid, probably sets charset to 0 (internal)
-8f9e: 8e 68 8e     <a name="SymL8F9E">L8F9E</a>           stx     <a href="#Symlower_case">lower_case</a>+1
-8fa1: 8d 69 8e                     sta     <a href="#Symlower_case">lower_case</a>+2
+8f93: 65 ee                        adc     temp              ;A = A * 3 via temp (3 pages per charset)
+8f95: 6d 08 8e                     adc     <a href="#Symfirst_charset">first_charset</a>+1   ;A = high byte of desired charset
+8f98: d0 04                        bne     @update_charset   ;questionable -- tests for zero page?
+8f9a: a2 00        @use_internal   ldx     #&lt;<a href="#Symbuiltin_charset">builtin_charset</a> ;select builtin charset, usually when 0 pressed
+8f9c: a9 93                        lda     #&gt;<a href="#Symbuiltin_charset">builtin_charset</a>
+8f9e: 8e 68 8e     @update_charset stx     <a href="#Symactive_charset">active_charset</a>
+8fa1: 8d 69 8e                     sta     <a href="#Symactive_charset">active_charset</a>+1
 8fa4: 60                           rts
 
 8fa5: a9 20        <a name="SymCOA_primary_hires1">COA_primary_hires1</a> lda  #$20              ;write to hires 1 ($2000) now
@@ -301,7 +317,7 @@
 8fb4: 8d 72 8e                     sta     <a href="#SymL8E72">L8E72</a>
 8fb7: a0 07                        ldy     #$07
 8fb9: b9 62 8e     <a name="SymL8FB9">L8FB9</a>           lda     <a href="#Symhires_base">hires_base</a>,y
-8fbc: 99 6a 8e                     sta     <a href="#Symlower_case">lower_case</a>+3,y
+8fbc: 99 6a 8e                     sta     <a href="#Symactive_charset">active_charset</a>+2,y
 8fbf: 88                           dey
 8fc0: 10 f7                        bpl     <a href="#SymL8FB9">L8FB9</a>
 8fc2: a5 24        <a name="SymL8FC2">L8FC2</a>           lda     <a href="#SymMON_CH">MON_CH</a>
@@ -332,7 +348,7 @@
 8ff0: 2c 72 8e                     bit     <a href="#SymL8E72">L8E72</a>
 8ff3: 10 53                        bpl     <a href="#Symreturn">return</a>
 8ff5: a0 07                        ldy     #$07
-8ff7: b9 6a 8e     <a name="SymL8FF7">L8FF7</a>           lda     <a href="#Symlower_case">lower_case</a>+3,y
+8ff7: b9 6a 8e     <a name="SymL8FF7">L8FF7</a>           lda     <a href="#Symactive_charset">active_charset</a>+2,y
 8ffa: 99 62 8e                     sta     <a href="#Symhires_base">hires_base</a>,y
 8ffd: 88                           dey
 8ffe: 10 f7                        bpl     <a href="#SymL8FF7">L8FF7</a>
@@ -518,7 +534,7 @@
 914b: 85 23                        sta     <a href="#SymMON_WNDBTM">MON_WNDBTM</a>
 914d: 4c 22 fc                     jmp     <a href="#SymMON_VTAB">MON_VTAB</a>
 
-9150: 4c 09 8e     <a name="SymCOY_userA">COY_userA</a>       jmp     <a href="#SymL8E09">L8E09</a>
+9150: 4c 09 8e     <a name="SymCOY_userA">COY_userA</a>       jmp     <a href="#SymuserA">userA</a>
 
 9153: b0 24        <a name="SymCZ_restore_default">CZ_restore_default</a> bcs  <a href="#SymCOZ_userB">COZ_userB</a>
 9155: a9 00        <a name="SymL9155">L9155</a>           lda     #$00
@@ -527,17 +543,17 @@
 915c: 88                           dey
 915d: 10 fa                        bpl     <a href="#SymL9159">L9159</a>
 915f: 20 2e 91                     jsr     <a href="#SymL912E">L912E</a>
-9162: 20 9a 8f                     jsr     <a href="#SymL8F9A">L8F9A</a>
+9162: 20 9a 8f                     jsr     @use_internal
 9165: 20 a5 8f                     jsr     <a href="#SymCOA_primary_hires1">COA_primary_hires1</a>
 9168: a9 25                        lda     #$25
-916a: 8d 0a 8e                     sta     <a href="#SymL8E09">L8E09</a>+1
-916d: 8d 0d 8e                     sta     <a href="#SymL8E0C">L8E0C</a>+1
+916a: 8d 0a 8e                     sta     <a href="#SymuserA">userA</a>+1
+916d: 8d 0d 8e                     sta     <a href="#SymuserB">userB</a>+1
 9170: a9 91                        lda     #$91
-9172: 8d 0b 8e                     sta     <a href="#SymL8E09">L8E09</a>+2
-9175: 8d 0e 8e                     sta     <a href="#SymL8E0C">L8E0C</a>+2
+9172: 8d 0b 8e                     sta     <a href="#SymuserA">userA</a>+2
+9175: 8d 0e 8e                     sta     <a href="#SymuserB">userB</a>+2
 9178: 60                           rts
 
-9179: 4c 0c 8e     <a name="SymCOZ_userB">COZ_userB</a>       jmp     <a href="#SymL8E0C">L8E0C</a>
+9179: 4c 0c 8e     <a name="SymCOZ_userB">COZ_userB</a>       jmp     <a href="#SymuserB">userB</a>
 
 917c: 0e 61 8e     <a name="Symdraw_char">draw_char?</a>      asl     <a href="#Symkey_state">key_state</a>
 917f: b0 a4                        bcs     @return
@@ -559,11 +575,11 @@
 919e: 0a                           asl     A
 919f: 26 ef                        rol     $ef
 91a1: 18                           clc
-91a2: 6d 68 8e                     adc     <a href="#Symlower_case">lower_case</a>+1
-91a5: 85 ee                        sta     $ee
+91a2: 6d 68 8e                     adc     <a href="#Symactive_charset">active_charset</a>
+91a5: 85 ee                        sta     temp
 91a7: a5 ef                        lda     $ef
 91a9: 29 07                        and     #$07
-91ab: 6d 69 8e                     adc     <a href="#Symlower_case">lower_case</a>+2
+91ab: 6d 69 8e                     adc     <a href="#Symactive_charset">active_charset</a>+1
 91ae: 85 ef                        sta     $ef
 91b0: 20 cc 92                     jsr     <a href="#SymL92CC">L92CC</a>
 91b3: 65 24                        adc     <a href="#SymMON_CH">MON_CH</a>
@@ -577,7 +593,7 @@
 91c4: 91 28                        sta     (<a href="#SymMON_BASL">MON_BASL</a>),y
 91c6: a2 00                        ldx     #$00
 91c8: a0 00                        ldy     #$00
-91ca: b1 ee        <a name="SymL91CA">L91CA</a>           lda     ($ee),y
+91ca: b1 ee        <a name="SymL91CA">L91CA</a>           lda     (temp),y
 91cc: 4d 63 8e                     eor     <a href="#Syminverse_video">inverse_video</a>
 91cf: 2c 64 8e                     bit     <a href="#Symtransparent_mode">transparent_mode</a>
 91d2: 10 11                        bpl     <a href="#SymL91E5">L91E5</a>
@@ -685,7 +701,7 @@
 
 928e: a4 24        <a name="SymL928E">L928E</a>           ldy     <a href="#SymMON_CH">MON_CH</a>
 9290: a5 25                        lda     <a href="#SymMON_CV">MON_CV</a>
-9292: 84 ee        <a name="SymL9292">L9292</a>           sty     $ee
+9292: 84 ee        <a name="SymL9292">L9292</a>           sty     temp
 9294: 20 ce 92                     jsr     <a href="#SymL92CE">L92CE</a>
 9297: a2 07                        ldx     #$07
 9299: ad 63 8e     <a name="SymL9299">L9299</a>           lda     <a href="#Syminverse_video">inverse_video</a>
@@ -706,7 +722,7 @@
 92bb: 90 dc                        bcc     <a href="#SymL9299">L9299</a>
 92bd: ca                           dex
 92be: 30 0b                        bmi     <a href="#SymL92CB">L92CB</a>
-92c0: a4 ee                        ldy     $ee
+92c0: a4 ee                        ldy     temp
 92c2: a5 2b                        lda     $2b
 92c4: 18                           clc
 92c5: 69 04                        adc     #$04
@@ -720,22 +736,20 @@
 92d0: 29 03                        and     #$03              ;$20,$20,$21,$21,$22,$22,$23,$23, repeat
 92d2: 0d 62 8e                     ora     <a href="#Symhires_base">hires_base</a>
 92d5: 85 2b                        sta     $2b
-92d7: bd e0 92                     lda     <a href="#SymL92E0">L92E0</a>,x
+92d7: bd e0 92                     lda     <a href="#Symhires_addr_tbl">hires_addr_tbl</a>,x
 92da: 6a                           ror     A                 ;why??
 92db: 65 20                        adc     <a href="#SymMON_WNDLEFT">MON_WNDLEFT</a>
 92dd: 85 2a                        sta     $2a
 92df: 60                           rts
 
-                   <span style="background-color: #72be72">NOTE: Appears rest of file is data. There is a table at 92e0 which probably</span>
-                   <span style="background-color: #72be72">computes hires address. And there may be character data starting at $9300.</span>
-92e0: 00 00 00 00+ <a name="SymL92E0">L92E0</a>           .bulk   0000000050505050a0a0a0a0 ;I *think* this is 12 bytes (24 lines)
+92e0: 00 00 00 00+ <a name="Symhires_addr_tbl">hires_addr_tbl</a>  .bulk   0000000050505050a0a0a0a0 ;12 bytes (24 lines)
 92ec: b9 a2 a0 d2+                 .align  $0100 (20 bytes)  ;more speculation
 
                    ; Standard monochrome (1bpp) 7x8 font bitmap, 1 byte per character line, 8
                    ; consecutive bytes (lines) per character. High bit is unused. Covers 96 high
                    ; ASCII chars A0-FF.
                    <img class="vis" alt="vis" src="HRCG.code_IMG/vis000500_00.gif" width="128" height="55"/>
-9300: 00 00 00 00+ <a name="Symbuiltin_font">builtin_font</a>    .bulk   0000000000000000  ; space
+9300: 00 00 00 00+ <a name="Symbuiltin_charset">builtin_charset</a> .bulk   0000000000000000  ; space
 9308: 08 08 08 08+                 .bulk   0808080808000800  ; !
 9310: 14 14 14 00+                 .bulk   1414140000000000  ; "
 9318: 14 14 3e 14+                 .bulk   14143e143e141400  ; #
@@ -846,7 +860,7 @@
     <div id="footer">
         <hr/>
         <p>HTML generated by <a href="https://6502bench.com/">6502bench SourceGen</a> v1.7.3
-        on 2021/02/02 <!--17:58:56 -06:00--></p>
+        on 2021/02/03 <!--01:09:06 -06:00--></p>
         <p>Expression style: Common</p>
         <!-- parameters: cols=16,8,18,100;extraCols=Address,Bytes;byteSpc=True;commaBulk=False;nonuPfx='@';varPfx='';labelBrk=False;notes=True;gfx=True;opWrap=64 -->
     </div>
