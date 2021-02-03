@@ -180,6 +180,8 @@
 
 "Comments":{
 "6":"version number * 10",
+"9":"user subroutine A",
+"12":"user subroutine B",
 "48":"connect DOS to our handlers",
 "51":"select full screen graphics",
 "54":"select hires graphics",
@@ -191,6 +193,7 @@
 "101":"$60 to use second screen for overlay (^O ^T/^R)",
 "102":"$FF if wrap mode, $00 if scroll",
 "103":"$80=lower case, $00=upper",
+"104":"pointer to active charset",
 "168":"get keypress",
 "174":"if no key pressed",
 "176":"save keypress",
@@ -220,10 +223,12 @@
 "383":"^O ^A -- primary screen 1",
 "385":"set flag indicating Ctrl-A was pressed",
 "391":"get the digit pressed after ^A",
-"395":"not a digit",
-"397":"might be pointer to current charset",
-"410":"$9300 is original value of vector above",
-"412":"so if digit invalid, probably sets charset to 0 (internal)",
+"395":"use internal charset if not 1..9",
+"397":"X = low byte of lowest charset in memory",
+"403":"A = A * 3 via temp (3 pages per charset)",
+"405":"A = high byte of desired charset",
+"408":"questionable -- tests for zero page?",
+"410":"select builtin charset, usually when 0 pressed",
 "421":"write to hires 1 ($2000) now",
 "461":"write to hires 2 ($4000) now",
 "467":"^O ^C -- complement",
@@ -243,7 +248,7 @@
 "955":"eor $60 flips $20 to $40 and vice versa",
 "1232":"$20,$20,$21,$21,$22,$22,$23,$23, repeat",
 "1242":"why??",
-"1248":"I *think* this is 12 bytes (24 lines)",
+"1248":"12 bytes (24 lines)",
 "1260":"more speculation",
 "1280":" space",
 "1288":" !",
@@ -305,6 +310,30 @@
 "Text":"Standard monochrome (1bpp) 7x8 font bitmap, 1 byte per character line, 8 consecutive bytes (lines) per character. High bit is unused. Covers 96 high ASCII chars A0-FF.",
 "BoxMode":false,
 "MaxWidth":80,
+"BackgroundColor":0},
+
+"329":{
+"Text":"Jump table used by previous subroutine to handle control character input (with low byte -1 for RTS adjustment). Function names are based on the toolkit documentation, with the control char (\"CB\" for ^B) prepended. This is a state machine and a couple chars only have meaning after a ^O; those have e.g. \"COR\" for ^O ^R prepended.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"9":{
+"Text":"Vectors for user subroutines A (^O ^Y) and B (^O ^Z).\r\nThe user pokes these with the desired addresses.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"7":{
+"Text":"Poked by the loader to point to the first alternate charset.\r\nAs this defaults to the builtin charset, both ^A 0 and ^A 1\r\nwill display the builtin charset if no alternates are loaded.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"391":{
+"Text":"Process ^A argument, the charset number to activate. Anything other than 1..9 selects the builtin charset. 1 selects the lowest charset in memory, 2 selects lowest + $0300, and so on.\r\n\r\nThere is no further bounds check on the charset number, so if you select charset 4 when 3 are loaded, you will get garbage. (Since LOADHRCG loads charsets directly below HRCG, charset 4 would be HRCG code and charset 5 is $100 into the builtin charset, which effectively shifts uppercase to lowercase!)",
+"BoxMode":false,
+"MaxWidth":80,
 "BackgroundColor":0}},
 
 "Notes":{
@@ -320,20 +349,8 @@
 "MaxWidth":80,
 "BackgroundColor":-7278960},
 
-"329":{
-"Text":"Jump table used by previous subroutine (with low byte -1 for RTS adjustment). We should be able to name these based on the documentation for control char functions. HRCG uses Ctrl-A ($01) through Ctrl-Z ($1a).",
-"BoxMode":false,
-"MaxWidth":80,
-"BackgroundColor":-256},
-
 "663":{
 "Text":"This appears to set Normal mode as a side effect but untested.",
-"BoxMode":false,
-"MaxWidth":80,
-"BackgroundColor":-7278960},
-
-"1248":{
-"Text":"Appears rest of file is data. There is a table at 92e0 which probably computes hires address. And there may be character data starting at $9300.\r\n",
 "BoxMode":false,
 "MaxWidth":80,
 "BackgroundColor":-7278960}},
@@ -718,13 +735,70 @@
 "LabelAnno":"None"},
 
 "1280":{
-"Label":"builtin_font",
+"Label":"builtin_charset",
 "Value":37632,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"1248":{
+"Label":"hires_addr_tbl",
+"Value":37600,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"12":{
+"Label":"userB",
+"Value":36364,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"9":{
+"Label":"userA",
+"Value":36361,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"7":{
+"Label":"first_charset",
+"Value":36359,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"410":{
+"Label":"use_internal",
+"Value":36762,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"414":{
+"Label":"update_charset",
+"Value":36766,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"104":{
+"Label":"active_charset",
+"Value":36456,
 "Source":"User",
 "Type":"GlobalAddr",
 "LabelAnno":"None"}},
 
 "OperandFormats":{
+"7":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Symbol",
+"SymbolRef":{
+"Label":"builtin_charset",
+"Part":"Low"}},
+
 "32":{
 "Length":2,
 "Format":"NumericLE",
@@ -756,6 +830,14 @@
 "SymbolRef":{
 "Label":"csw_handler",
 "Part":"High"}},
+
+"104":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Symbol",
+"SymbolRef":{
+"Label":"builtin_charset",
+"Part":"Low"}},
 
 "329":{
 "Length":2,
@@ -972,6 +1054,22 @@
 "SymbolRef":{
 "Label":"CZ_restore_default",
 "Part":"Low"}},
+
+"410":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Symbol",
+"SymbolRef":{
+"Label":"builtin_charset",
+"Part":"Low"}},
+
+"412":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Symbol",
+"SymbolRef":{
+"Label":"builtin_charset",
+"Part":"High"}},
 
 "1248":{
 "Length":12,
@@ -1610,6 +1708,25 @@
 "MultiMask":null,
 "Label":"saveA",
 "Value":255,
+"Source":"Variable",
+"Type":"ExternalAddr",
+"LabelAnno":"None"}],
+"ClearPrevious":false},
+
+"391":{
+"Variables":[{
+"DataDescriptor":{
+"Length":1,
+"Format":"NumericLE",
+"SubFormat":"Hex",
+"SymbolRef":null},
+
+"Comment":"temp for multiply by 3",
+"HasWidth":true,
+"Direction":"ReadWrite",
+"MultiMask":null,
+"Label":"temp",
+"Value":238,
 "Source":"Variable",
 "Type":"ExternalAddr",
 "LabelAnno":"None"}],
