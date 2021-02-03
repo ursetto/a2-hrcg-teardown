@@ -1,0 +1,854 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <title>HRCG.code Disassembly</title>
+
+    <meta content="en-us" http-equiv="Content-Language" />
+    <meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
+    <meta name="description" content="SourceGen-generated disassembly of HRCG.code" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <link href="SGStyle.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+    <p style="font-size:smaller;"><a href="./">(back to project page)</a></p>
+    <h1>HRCG.code Disassembly</h1>
+
+    <div id="code-lines">
+        <!-- The CodeLines marker is not optional, and may only appear once -->
+<pre>                   ; 6502bench SourceGen v1.7.3
+                   ; 
+                   ; Note I omitted the first two bytes $00 $08 (file code length $0800) from this
+                   ; file. This may not have been a great idea, as you'll need to prepend them to
+                   ; the assembly output to create a working relocatable object file.
+                   <a name="SymMON_WNDLEFT">MON_WNDLEFT</a>     .eq     $20               ;left column of scroll window
+                   <a name="SymMON_WNDWDTH">MON_WNDWDTH</a>     .eq     $21               ;width of scroll window
+                   <a name="SymMON_WNDTOP">MON_WNDTOP</a>      .eq     $22               ;top of scroll window
+                   <a name="SymMON_WNDBTM">MON_WNDBTM</a>      .eq     $23               ;bottom of scroll window
+                   <a name="SymMON_CH">MON_CH</a>          .eq     $24               ;cursor horizontal displacement
+                   <a name="SymMON_CV">MON_CV</a>          .eq     $25               ;cursor vertical displacement
+                   <a name="SymMON_BASL">MON_BASL</a>        .eq     $28               ;base address for text output (lo)
+                   <a name="SymMON_BASH">MON_BASH</a>        .eq     $29               ;base address for text output (hi)
+                   <a name="SymMON_CSWL">MON_CSWL</a>        .eq     $36               ;character output hook (lo)
+                   <a name="SymMON_CSWH">MON_CSWH</a>        .eq     $37               ;character output hook (hi)
+                   <a name="SymMON_KSWL">MON_KSWL</a>        .eq     $38               ;character input hook (lo)
+                   <a name="SymMON_KSWH">MON_KSWH</a>        .eq     $39               ;character input hook (hi)
+                   <a name="SymMON_RNDL">MON_RNDL</a>        .eq     $4e               ;low byte of KEYIN "random" value
+                   <a name="SymMON_RNDH">MON_RNDH</a>        .eq     $4f               ;high byte of KEYIN "random" value
+                   <a name="SymDOS_CHARIO">DOS_CHARIO</a>      .eq     $03ea             ;jumps to routine that connects DOS KSW/CSW
+                   <a name="SymKBD">KBD</a>             .eq     $c000             ;R last key pressed + 128
+                   <a name="SymKBDSTRB">KBDSTRB</a>         .eq     $c010             ;RW keyboard strobe
+                   <a name="SymTXTCLR">TXTCLR</a>          .eq     $c050             ;RW display graphics
+                   <a name="SymMIXCLR">MIXCLR</a>          .eq     $c052             ;RW display full screen
+                   <a name="SymTXTPAGE1">TXTPAGE1</a>        .eq     $c054             ;RW display page 1
+                   <a name="SymTXTPAGE2">TXTPAGE2</a>        .eq     $c055             ;RW display page 2 (or read/write aux mem)
+                   <a name="SymHIRES">HIRES</a>           .eq     $c057             ;RW display hi-res graphics
+                   <a name="SymMON_BELL">MON_BELL</a>        .eq     $fbdd             ;Sound bell unconditionally
+                   <a name="SymMON_VTAB">MON_VTAB</a>        .eq     $fc22             ;tab to row specified in Acc
+                   <a name="SymMON_VTABZ">MON_VTABZ</a>       .eq     $fc24
+                   <a name="SymMON_CLREOP">MON_CLREOP</a>      .eq     $fc42             ;clear screen from cursor to end of page
+                   <a name="SymMON_HOME">MON_HOME</a>        .eq     $fc58             ;clear screen and reset text output to top-left
+                   <a name="SymMON_SCROLL">MON_SCROLL</a>      .eq     $fc70             ;scroll up one line
+                   <a name="SymMON_CLREOL">MON_CLREOL</a>      .eq     $fc9c             ;clear to end of line
+                   <a name="SymMON_COUT">MON_COUT</a>        .eq     $fded             ;print Acc to output device via $36-37
+
+                                   .org    $8e00
+8e00: 4c 0f 8e     <a name="Symhires1_entry">hires1_entry</a>    jmp     <a href="#Symstart">start</a>
+
+                   <span style="background-color: #cb9099">NOTE: I'm not sure this is true -- it just seems to skip banner output.</span>
+                   ; Per the documentation, this secondary entry point is used when the application
+                   ; does not want to use hires page 1 at all, only page 2. It skips clearing and
+                   ; enabling HIRES page 1.
+8e03: 4c 20 8e     <a name="Symhires2_entry">hires2_entry</a>    jmp     <a href="#SymL8E20">L8E20</a>
+
+8e06: 0a           <a name="Symversion">version</a>         .dd1    $0a               ;version number * 10
+8e07: 00                           .dd1    $00
+8e08: 93                           .dd1    $93
+
+8e09: 4c 48 90     <a name="SymL8E09">L8E09</a>           jmp     <a href="#Symreturn">return</a>
+
+8e0c: 4c 48 90     <a name="SymL8E0C">L8E0C</a>           jmp     <a href="#Symreturn">return</a>
+
+8e0f: 20 20 8e     <a name="Symstart">start</a>           jsr     <a href="#SymL8E20">L8E20</a>
+                   ; Output our banner to hires screen.
+8e12: a0 00                        ldy     #$00
+8e14: b9 43 8e     @loop           lda     <a href="#SymL8E43">L8E43</a>,y
+8e17: 20 ed fd                     jsr     <a href="#SymMON_COUT">MON_COUT</a>
+8e1a: c8                           iny
+8e1b: c0 1d                        cpy     #$1d
+8e1d: 90 f5                        bcc     @loop
+8e1f: 60                           rts
+
+8e20: a9 75        <a name="SymL8E20">L8E20</a>           lda     #&lt;<a href="#Symksw_handler">ksw_handler</a>
+8e22: 85 38                        sta     <a href="#SymMON_KSWL">MON_KSWL</a>
+8e24: a9 8e                        lda     #&gt;<a href="#Symksw_handler">ksw_handler</a>
+8e26: 85 39                        sta     <a href="#SymMON_KSWH">MON_KSWH</a>
+8e28: a9 19                        lda     #&lt;<a href="#Symcsw_handler">csw_handler</a>
+8e2a: 85 36                        sta     <a href="#SymMON_CSWL">MON_CSWL</a>
+8e2c: a9 8f                        lda     #&gt;<a href="#Symcsw_handler">csw_handler</a>
+8e2e: 85 37                        sta     <a href="#SymMON_CSWH">MON_CSWH</a>
+8e30: 20 ea 03                     jsr     <a href="#SymDOS_CHARIO">DOS_CHARIO</a>        ;connect DOS to our handlers
+8e33: 2c 52 c0                     bit     <a href="#SymMIXCLR">MIXCLR</a>            ;select full screen graphics
+8e36: 2c 57 c0                     bit     <a href="#SymHIRES">HIRES</a>             ;select hires graphics
+8e39: 20 55 91                     jsr     <a href="#SymL9155">L9155</a>
+8e3c: 20 0e 90                     jsr     <a href="#SymL900E">L900E</a>
+8e3f: 2c 50 c0                     bit     <a href="#SymTXTCLR">TXTCLR</a>            ;actually enable graphics mode
+8e42: 60                           rts
+
+8e43: 90           <a name="SymL8E43">L8E43</a>           .dd1    $90
+8e44: c8 c9 ad d2+                 .str    ↑“HI-RES CHAR GEN VERSION 1.0”,$8d
+8e60: 00                           .dd1    $00
+8e61: 00           <a name="Symkey_state">key_state</a>       .dd1    $00               ;keypress state. $80 after ^A, $40 after ^O, or $00
+8e62: 20           <a name="Symhires_base">hires_base</a>      .dd1    $20               ;$20 (hires1) or $40 (hires2)
+8e63: 00           <a name="Syminverse_video">inverse_video</a>   .dd1    $00               ;$80 if inverse video active, $00 otherwise
+                   <span style="background-color: #72be72">NOTE: Looks like a bitfield. If bit 7 ($80) is set, character will overstrike</span>
+                   <span style="background-color: #72be72">(i.e. the background is ignored). If bit 6 ($40) is set, character will</span>
+                   <span style="background-color: #72be72">complement (in the shape of its fg or bg).  Apparently, "overstrike" and</span>
+                   <span style="background-color: #72be72">"transparent" modes ($80) are identical except sourcing from different pages; so</span>
+                   <span style="background-color: #72be72">are "complement" and "reverse" ($C0) modes. They are probably named in this odd</span>
+                   <span style="background-color: #72be72">way for mnemonic reasons, matching their control chars.</span>
+8e64: 00           <a name="Symtransparent_mode">transparent_mode</a> .dd1   $00               ;$80=overstrike, $C0=complement, $00=no mask
+8e65: 00           <a name="Symoverlay_mode">overlay_mode</a>    .dd1    $00               ;$60 to use second screen for overlay (^O ^T/^R)
+8e66: 00           <a name="Symwrap_mode">wrap_mode</a>       .dd1    $00               ;$FF if wrap mode, $00 if scroll
+8e67: 00           <a name="Symlower_case">lower_case</a>      .dd1    $00               ;$80=lower case, $00=upper
+8e68: 00                           .dd1    $00
+8e69: 93                           .dd1    $93
+8e6a: d0 a0 a0 a0+                 .str    ↑“P   L: %”
+8e72: 00           <a name="SymL8E72">L8E72</a>           .dd1    $00
+8e73: 00           <a name="SymL8E73">L8E73</a>           .dd1    $00
+8e74: 00                           .dd1    $00
+
+8e75: 91 28        <a name="Symksw_handler">ksw_handler</a>     sta     (<a href="#SymMON_BASL">MON_BASL</a>),y
+8e77: 86 eb                        stx     $eb
+8e79: a5 28                        lda     <a href="#SymMON_BASL">MON_BASL</a>
+8e7b: 85 2a                        sta     $2a
+8e7d: a5 29                        lda     <a href="#SymMON_BASH">MON_BASH</a>
+8e7f: 09 1c                        ora     #$1c
+8e81: 0d 62 8e                     ora     <a href="#Symhires_base">hires_base</a>
+8e84: 85 2b                        sta     $2b
+8e86: a2 01                        ldx     #$01
+8e88: b1 2a                        lda     ($2a),y
+8e8a: 48                           pha
+8e8b: e6 4e        <a name="SymL8E8B">L8E8B</a>           inc     <a href="#SymMON_RNDL">MON_RNDL</a>
+8e8d: d0 0b                        bne     <a href="#SymL8E9A">L8E9A</a>
+8e8f: e6 4f                        inc     <a href="#SymMON_RNDH">MON_RNDH</a>
+8e91: ca                           dex
+8e92: d0 06                        bne     <a href="#SymL8E9A">L8E9A</a>
+8e94: 49 7f                        eor     #$7f
+8e96: 91 2a                        sta     ($2a),y
+8e98: a2 50                        ldx     #$50
+8e9a: 2c 00 c0     <a name="SymL8E9A">L8E9A</a>           bit     <a href="#SymKBD">KBD</a>
+8e9d: 10 ec                        bpl     <a href="#SymL8E8B">L8E8B</a>
+8e9f: 68                           pla
+8ea0: 91 2a                        sta     ($2a),y
+8ea2: ba                           tsx
+8ea3: bd 04 01                     lda     $0104,x
+8ea6: c9 f8                        cmp     #$f8
+8ea8: ad 00 c0                     lda     <a href="#SymKBD">KBD</a>               ;get keypress
+8eab: 2c 10 c0                     bit     <a href="#SymKBDSTRB">KBDSTRB</a>
+8eae: 90 1b                        bcc     <a href="#SymL8ECB">L8ECB</a>             ;if no key pressed
+8eb0: 48                           pha                       ;save keypress
+8eb1: 2c 60 8e                     bit     <a href="#Symkey_state">key_state</a>-1
+8eb4: 30 18                        bmi     <a href="#SymL8ECE">L8ECE</a>             ;bit 7 was set (see below)
+8eb6: c9 9b                        cmp     #$9b
+8eb8: d0 07                        bne     <a href="#SymL8EC1">L8EC1</a>
+8eba: a9 80                        lda     #$80
+8ebc: 8d 60 8e                     sta     <a href="#Symkey_state">key_state</a>-1       ;set bit 7 for next time
+8ebf: d0 09                        bne     <a href="#SymL8ECA">L8ECA</a>             ;always
+
+8ec1: c9 8d        <a name="SymL8EC1">L8EC1</a>           cmp     #$8d              ;CR
+8ec3: d0 05                        bne     <a href="#SymL8ECA">L8ECA</a>
+8ec5: 20 8e 92                     jsr     <a href="#SymL928E">L928E</a>
+8ec8: a4 24        <a name="SymL8EC8">L8EC8</a>           ldy     <a href="#SymMON_CH">MON_CH</a>
+8eca: 68           <a name="SymL8ECA">L8ECA</a>           pla                       ;restore last keypress
+8ecb: a6 eb        <a name="SymL8ECB">L8ECB</a>           ldx     $eb
+8ecd: 60                           rts
+
+8ece: c9 c9        <a name="SymL8ECE">L8ECE</a>           cmp     #$c9
+8ed0: 90 0c                        bcc     <a href="#SymL8EDE">L8EDE</a>
+8ed2: c9 cd                        cmp     #$cd
+8ed4: f0 36                        beq     <a href="#SymL8F0C">L8F0C</a>
+8ed6: b0 06                        bcs     <a href="#SymL8EDE">L8EDE</a>
+8ed8: c9 cb                        cmp     #$cb
+8eda: f0 2b                        beq     <a href="#SymL8F07">L8F07</a>
+8edc: 90 ec                        bcc     <a href="#SymL8ECA">L8ECA</a>
+8ede: 0e 60 8e     <a name="SymL8EDE">L8EDE</a>           asl     <a href="#Symkey_state">key_state</a>-1
+8ee1: c9 c0                        cmp     #$c0
+8ee3: d0 06                        bne     <a href="#SymL8EEB">L8EEB</a>
+8ee5: 20 71 92                     jsr     <a href="#SymL9271">L9271</a>
+8ee8: 4c c8 8e                     jmp     <a href="#SymL8EC8">L8EC8</a>
+
+8eeb: c9 c5        <a name="SymL8EEB">L8EEB</a>           cmp     #$c5
+8eed: d0 06                        bne     <a href="#SymL8EF5">L8EF5</a>
+8eef: 20 8e 92                     jsr     <a href="#SymL928E">L928E</a>
+8ef2: 4c c8 8e                     jmp     <a href="#SymL8EC8">L8EC8</a>
+
+8ef5: c9 c6        <a name="SymL8EF5">L8EF5</a>           cmp     #$c6
+8ef7: d0 06                        bne     <a href="#SymL8EFF">L8EFF</a>
+8ef9: 20 7b 92                     jsr     <a href="#SymL927B">L927B</a>
+8efc: 4c c8 8e                     jmp     <a href="#SymL8EC8">L8EC8</a>
+
+8eff: c9 c3        <a name="SymL8EFF">L8EFF</a>           cmp     #$c3
+8f01: f0 09                        beq     <a href="#SymL8F0C">L8F0C</a>
+8f03: c9 c1                        cmp     #$c1
+8f05: d0 c3                        bne     <a href="#SymL8ECA">L8ECA</a>
+8f07: c8           <a name="SymL8F07">L8F07</a>           iny
+8f08: c4 21                        cpy     <a href="#SymMON_WNDWDTH">MON_WNDWDTH</a>
+8f0a: 90 bc                        bcc     <a href="#SymL8EC8">L8EC8</a>
+8f0c: a4 25        <a name="SymL8F0C">L8F0C</a>           ldy     <a href="#SymMON_CV">MON_CV</a>
+8f0e: c8                           iny
+8f0f: c4 23                        cpy     <a href="#SymMON_WNDBTM">MON_WNDBTM</a>
+8f11: 90 b5                        bcc     <a href="#SymL8EC8">L8EC8</a>
+8f13: 20 22 92                     jsr     <a href="#SymL9222">L9222</a>
+8f16: 4c c8 8e                     jmp     <a href="#SymL8EC8">L8EC8</a>
+
+                   saveY           .var    $35    {addr/1}   ;preserve Y
+                   saveX           .var    $eb    {addr/1}   ;preserve X
+                   saveA           .var    $ff    {addr/1}   ;preserve A
+
+8f19: 85 ff        <a name="Symcsw_handler">csw_handler</a>     sta     saveA             ;preserve A/X/Y
+8f1b: 86 eb                        stx     saveX
+8f1d: 84 35                        sty     saveY
+8f1f: 20 29 8f                     jsr     @csw1
+8f22: a4 35                        ldy     saveY
+8f24: a6 eb                        ldx     saveX
+8f26: a5 ff                        lda     saveA
+8f28: 60                           rts
+
+8f29: 29 7f        @csw1           and     #$7f
+8f2b: 0e 61 8e                     asl     <a href="#Symkey_state">key_state</a>         ;was set to $80 by Ctrl-A keypress
+8f2e: b0 57                        bcs     <a href="#Symctrl_a_arg">ctrl_a_arg</a>        ;so if carry set after ASL, key is arg to Ctrl-A
+8f30: c9 20                        cmp     #$20              ;control char 00..1f
+8f32: 90 03                        bcc     <a href="#Symcontrol_char">control_char</a>
+8f34: 4c 7c 91                     jmp     <a href="#Symdraw_char">draw_char</a>?        ;draw char to screen, probably
+
+                   ; Control char 00..1f encountered in output string. Jump to corresponding
+                   ; function in table if 00..1a (@-Z), or do nothing (?) if 1b..1f. Note Ctrl-@ is
+                   ; not documented.
+8f37: c9 1b        <a name="Symcontrol_char">control_char</a>    cmp     #$1b
+8f39: b0 0a                        bcs     @ret              ;1b..1f are not operations
+8f3b: 0a                           asl     A                 ;offset is 2*jump entry
+8f3c: aa                           tax
+8f3d: bd 4a 8f                     lda     <a href="#Symfunction_table">function_table</a>+1,x ;put jump table entry on stack
+8f40: 48                           pha
+8f41: bd 49 8f                     lda     <a href="#Symfunction_table">function_table</a>,x  ;for jump via RTS
+8f44: 48                           pha
+8f45: 0e 61 8e     @ret            asl     <a href="#Symkey_state">key_state</a>         ;sets carry if contained $80
+8f48: 60                           rts                       ;execute function 00..1b
+
+                   <span style="background-color: #cbcb00">NOTE: Jump table used by previous subroutine (with low byte -1 for RTS</span>
+                   <span style="background-color: #cbcb00">adjustment). We should be able to name these based on the documentation for</span>
+                   <span style="background-color: #cbcb00">control char functions. HRCG uses Ctrl-A ($01) through Ctrl-Z ($1a).</span>
+8f49: 47 90        <a name="Symfunction_table">function_table</a>  .dd2    <a href="#Symreturn">return</a>-1          ;^@ -- noop
+8f4b: 7e 8f                        .dd2    <a href="#SymCA_select_charset">CA_select_charset</a>-1 ;^A -- select charset
+8f4d: aa 8f                        .dd2    <a href="#SymCB_begin_block">CB_begin_block</a>-1
+8f4f: d2 8f                        .dd2    <a href="#SymCC_carriage_return">CC_carriage_return</a>-1
+8f51: ed 8f                        .dd2    <a href="#SymCD_delimit_block">CD_delimit_block</a>-1
+8f53: 1b 90                        .dd2    <a href="#SymCE_clear_eol">CE_clear_eol</a>-1
+8f55: 23 90                        .dd2    <a href="#SymCF_clear_eop">CF_clear_eop</a>-1
+8f57: dc fb                        .dd2    <a href="#SymMON_BELL">MON_BELL</a>-1        ;^G -- sound bell
+8f59: 2b 90                        .dd2    <a href="#SymCH_backspace">CH_backspace</a>-1    ;^H move cursor left (no rubout)
+8f5b: 40 90                        .dd2    <a href="#SymCI_inverse_video">CI_inverse_video</a>-1
+8f5d: 04 92                        .dd2    <a href="#SymCJ_nextline">CJ_nextline</a>?-1
+8f5f: 48 90                        .dd2    <a href="#SymCK_caps_lock">CK_caps_lock</a>-1
+8f61: 50 90                        .dd2    <a href="#SymCL_lower_case">CL_lower_case</a>-1
+8f63: 58 90                        .dd2    <a href="#SymCM_unknown">CM_unknown</a>?-1
+8f65: 73 90                        .dd2    <a href="#SymCN_normal_video">CN_normal_video</a>-1
+8f67: 7b 90                        .dd2    <a href="#SymCO_option_sel">CO_option_sel</a>-1
+8f69: 8e 90                        .dd2    <a href="#SymCP_clear_page">CP_clear_page</a>-1
+8f6b: 9f 90                        .dd2    <a href="#SymCQ_home_cursor">CQ_home_cursor</a>-1
+8f6d: ae 90                        .dd2    <a href="#SymCOR_reverse">COR_reverse</a>-1
+8f6f: bb 90                        .dd2    <a href="#SymCS_shift">CS_shift</a>-1
+8f71: c9 90                        .dd2    <a href="#SymCOT_transparent">COT_transparent</a>-1
+8f73: 47 90                        .dd2    <a href="#Symreturn">return</a>-1          ;Ctrl-U -- noop
+8f75: d6 90                        .dd2    <a href="#SymCV_textwin_ul">CV_textwin_ul</a>-1
+8f77: 04 91                        .dd2    <a href="#SymCW_textwin_lr">CW_textwin_lr</a>-1
+8f79: 47 90                        .dd2    <a href="#Symreturn">return</a>-1          ;Ctrl-X -- noop
+8f7b: 2b 91                        .dd2    <a href="#SymCY_textwin_full">CY_textwin_full</a>-1
+8f7d: 52 91                        .dd2    <a href="#SymCZ_restore_default">CZ_restore_default</a>-1
+
+                   ; Ctrl-A -- select charset.
+8f7f: b0 24        <a name="SymCA_select_charset">CA_select_charset</a> bcs   <a href="#SymCOA_primary_hires1">COA_primary_hires1</a> ;^O ^A -- primary screen 1
+8f81: a9 80                        lda     #$80              ;set flag indicating Ctrl-A was pressed
+8f83: 8d 61 8e                     sta     <a href="#Symkey_state">key_state</a>
+8f86: 60                           rts
+
+8f87: e9 31        <a name="Symctrl_a_arg">ctrl_a_arg</a>      sbc     #$31              ;get the digit pressed after ^A
+8f89: c9 09                        cmp     #$09
+8f8b: b0 0d                        bcs     <a href="#SymL8F9A">L8F9A</a>             ;not a digit
+8f8d: ae 07 8e                     ldx     <a href="#Symversion">version</a>+1         ;might be pointer to current charset
+8f90: 85 ee                        sta     $ee
+8f92: 0a                           asl     A
+8f93: 65 ee                        adc     $ee
+8f95: 6d 08 8e                     adc     <a href="#Symversion">version</a>+2
+8f98: d0 04                        bne     <a href="#SymL8F9E">L8F9E</a>
+8f9a: a2 00        <a name="SymL8F9A">L8F9A</a>           ldx     #$00              ;$9300 is original value of vector above
+8f9c: a9 93                        lda     #$93              ;so if digit invalid, probably sets charset to 0 (internal)
+8f9e: 8e 68 8e     <a name="SymL8F9E">L8F9E</a>           stx     <a href="#Symlower_case">lower_case</a>+1
+8fa1: 8d 69 8e                     sta     <a href="#Symlower_case">lower_case</a>+2
+8fa4: 60                           rts
+
+8fa5: a9 20        <a name="SymCOA_primary_hires1">COA_primary_hires1</a> lda  #$20              ;write to hires 1 ($2000) now
+8fa7: 8d 62 8e                     sta     <a href="#Symhires_base">hires_base</a>
+8faa: 60                           rts
+
+8fab: b0 20        <a name="SymCB_begin_block">CB_begin_block</a>  bcs     <a href="#SymCOB_primary_hires2">COB_primary_hires2</a>
+8fad: 2c 72 8e                     bit     <a href="#SymL8E72">L8E72</a>
+8fb0: 30 10                        bmi     <a href="#SymL8FC2">L8FC2</a>
+8fb2: a9 ff                        lda     #$ff
+8fb4: 8d 72 8e                     sta     <a href="#SymL8E72">L8E72</a>
+8fb7: a0 07                        ldy     #$07
+8fb9: b9 62 8e     <a name="SymL8FB9">L8FB9</a>           lda     <a href="#Symhires_base">hires_base</a>,y
+8fbc: 99 6a 8e                     sta     <a href="#Symlower_case">lower_case</a>+3,y
+8fbf: 88                           dey
+8fc0: 10 f7                        bpl     <a href="#SymL8FB9">L8FB9</a>
+8fc2: a5 24        <a name="SymL8FC2">L8FC2</a>           lda     <a href="#SymMON_CH">MON_CH</a>
+8fc4: 8d 73 8e                     sta     <a href="#SymL8E73">L8E73</a>
+8fc7: a5 25                        lda     <a href="#SymMON_CV">MON_CV</a>
+8fc9: 8d 74 8e                     sta     <a href="#Symksw_handler">ksw_handler</a>-1
+8fcc: 60                           rts
+
+8fcd: a9 40        <a name="SymCOB_primary_hires2">COB_primary_hires2</a> lda  #$40              ;write to hires 2 ($4000) now
+8fcf: 8d 62 8e                     sta     <a href="#Symhires_base">hires_base</a>
+8fd2: 60                           rts
+
+8fd3: b0 0e        <a name="SymCC_carriage_return">CC_carriage_return</a> bcs  <a href="#SymCOC_complement">COC_complement</a>    ;^O ^C -- complement
+8fd5: ad 73 8e                     lda     <a href="#SymL8E73">L8E73</a>
+8fd8: c5 24                        cmp     <a href="#SymMON_CH">MON_CH</a>
+8fda: 85 24                        sta     <a href="#SymMON_CH">MON_CH</a>
+8fdc: f0 02                        beq     <a href="#SymL8FE0">L8FE0</a>
+8fde: b0 68                        bcs     <a href="#Symreturn">return</a>
+8fe0: 4c 05 92     <a name="SymL8FE0">L8FE0</a>           jmp     <a href="#SymCJ_nextline">CJ_nextline</a>?
+
+8fe3: a9 c0        <a name="SymCOC_complement">COC_complement</a>  lda     #$c0
+8fe5: 8d 64 8e                     sta     <a href="#Symtransparent_mode">transparent_mode</a>
+8fe8: a9 00                        lda     #$00
+8fea: 8d 65 8e                     sta     <a href="#Symoverlay_mode">overlay_mode</a>
+8fed: 60                           rts
+
+8fee: b0 1e        <a name="SymCD_delimit_block">CD_delimit_block</a> bcs    <a href="#SymL900E">L900E</a>
+8ff0: 2c 72 8e                     bit     <a href="#SymL8E72">L8E72</a>
+8ff3: 10 53                        bpl     <a href="#Symreturn">return</a>
+8ff5: a0 07                        ldy     #$07
+8ff7: b9 6a 8e     <a name="SymL8FF7">L8FF7</a>           lda     <a href="#Symlower_case">lower_case</a>+3,y
+8ffa: 99 62 8e                     sta     <a href="#Symhires_base">hires_base</a>,y
+8ffd: 88                           dey
+8ffe: 10 f7                        bpl     <a href="#SymL8FF7">L8FF7</a>
+9000: a9 00                        lda     #$00
+9002: 8d 72 8e                     sta     <a href="#SymL8E72">L8E72</a>
+9005: 8d 73 8e                     sta     <a href="#SymL8E73">L8E73</a>
+9008: a5 22                        lda     <a href="#SymMON_WNDTOP">MON_WNDTOP</a>
+900a: 8d 74 8e                     sta     <a href="#Symksw_handler">ksw_handler</a>-1
+900d: 60                           rts
+
+900e: 2c 54 c0     <a name="SymL900E">L900E</a>           bit     <a href="#SymTXTPAGE1">TXTPAGE1</a>
+9011: ad 62 8e                     lda     <a href="#Symhires_base">hires_base</a>
+9014: c9 40                        cmp     #$40
+9016: d0 30                        bne     <a href="#Symreturn">return</a>
+9018: 2c 55 c0                     bit     <a href="#SymTXTPAGE2">TXTPAGE2</a>
+901b: 60                           rts
+
+901c: b0 2a        <a name="SymCE_clear_eol">CE_clear_eol</a>    bcs     <a href="#Symreturn">return</a>
+901e: 20 8e 92                     jsr     <a href="#SymL928E">L928E</a>
+9021: 4c 9c fc                     jmp     <a href="#SymMON_CLREOL">MON_CLREOL</a>
+
+                   ; Ctrl-F -- clear to end of page.
+9024: b0 22        <a name="SymCF_clear_eop">CF_clear_eop</a>    bcs     <a href="#Symreturn">return</a>            ;sync the text screen
+9026: 20 7b 92                     jsr     <a href="#SymL927B">L927B</a>
+9029: 4c 42 fc                     jmp     <a href="#SymMON_CLREOP">MON_CLREOP</a>        ;sync the text screen
+
+                   ; Move the cursor backward one space.
+902c: c6 24        <a name="SymCH_backspace">CH_backspace</a>    dec     <a href="#SymMON_CH">MON_CH</a>
+902e: 10 18                        bpl     <a href="#Symreturn">return</a>
+9030: a5 21                        lda     <a href="#SymMON_WNDWDTH">MON_WNDWDTH</a>
+9032: 85 24                        sta     <a href="#SymMON_CH">MON_CH</a>
+9034: c6 24                        dec     <a href="#SymMON_CH">MON_CH</a>
+9036: a5 22                        lda     <a href="#SymMON_WNDTOP">MON_WNDTOP</a>
+9038: c5 25                        cmp     <a href="#SymMON_CV">MON_CV</a>
+903a: b0 0c                        bcs     <a href="#Symreturn">return</a>
+903c: c6 25                        dec     <a href="#SymMON_CV">MON_CV</a>
+903e: 4c 22 fc                     jmp     <a href="#SymMON_VTAB">MON_VTAB</a>
+
+9041: b0 05        <a name="SymCI_inverse_video">CI_inverse_video</a> bcs    <a href="#Symreturn">return</a>
+9043: a9 7f                        lda     #$7f
+9045: 8d 63 8e                     sta     <a href="#Syminverse_video">inverse_video</a>
+9048: 60           <a name="Symreturn">return</a>          rts
+
+9049: b0 fd        <a name="SymCK_caps_lock">CK_caps_lock</a>    bcs     <a href="#Symreturn">return</a>
+904b: a9 00                        lda     #$00
+904d: 8d 67 8e                     sta     <a href="#Symlower_case">lower_case</a>
+9050: 60                           rts
+
+9051: b0 f5        <a name="SymCL_lower_case">CL_lower_case</a>   bcs     <a href="#Symreturn">return</a>
+9053: a9 80                        lda     #$80
+9055: 8d 67 8e                     sta     <a href="#Symlower_case">lower_case</a>
+9058: 60                           rts
+
+9059: ac 00 c0     <a name="SymCM_unknown">CM_unknown?</a>     ldy     <a href="#SymKBD">KBD</a>
+905c: 10 13                        bpl     <a href="#SymL9071">L9071</a>
+905e: c0 93                        cpy     #$93
+9060: d0 0f                        bne     <a href="#SymL9071">L9071</a>
+9062: 2c 10 c0                     bit     <a href="#SymKBDSTRB">KBDSTRB</a>
+9065: ac 00 c0     <a name="SymL9065">L9065</a>           ldy     <a href="#SymKBD">KBD</a>
+9068: 10 fb                        bpl     <a href="#SymL9065">L9065</a>
+906a: c0 83                        cpy     #$83
+906c: f0 03                        beq     <a href="#SymL9071">L9071</a>
+906e: 2c 10 c0                     bit     <a href="#SymKBDSTRB">KBDSTRB</a>
+9071: 4c 01 92     <a name="SymL9071">L9071</a>           jmp     <a href="#SymL9201">L9201</a>
+
+9074: b0 d2        <a name="SymCN_normal_video">CN_normal_video</a> bcs     <a href="#Symreturn">return</a>            ;^O ^N -- unused
+9076: a9 00                        lda     #$00
+9078: 8d 63 8e                     sta     <a href="#Syminverse_video">inverse_video</a>
+907b: 60                           rts
+
+907c: b0 06        <a name="SymCO_option_sel">CO_option_sel</a>   bcs     <a href="#Symset_overstrike">set_overstrike</a>    ;second ^O -- overstrike
+907e: a9 40                        lda     #$40              ;first ^O -- record in state machine
+9080: 8d 61 8e                     sta     <a href="#Symkey_state">key_state</a>
+9083: 60                           rts
+
+9084: a9 80        <a name="Symset_overstrike">set_overstrike</a>  lda     #$80
+9086: 8d 64 8e                     sta     <a href="#Symtransparent_mode">transparent_mode</a>
+9089: a9 00                        lda     #$00
+908b: 8d 65 8e                     sta     <a href="#Symoverlay_mode">overlay_mode</a>
+908e: 60                           rts
+
+908f: b0 06        <a name="SymCP_clear_page">CP_clear_page</a>   bcs     <a href="#SymCOP_print">COP_print</a>         ;^O ^P -- print
+9091: 20 71 92                     jsr     <a href="#SymL9271">L9271</a>             ;plain ^P
+9094: 4c 58 fc                     jmp     <a href="#SymMON_HOME">MON_HOME</a>
+
+                   <span style="background-color: #72be72">NOTE: This appears to set Normal mode as a side effect but untested.</span>
+                   ; Set overwrite ("print") mode, the default mode, where character bg and fg
+                   ; completely replace underlying graphics.
+9097: a9 00        <a name="SymCOP_print">COP_print</a>       lda     #$00
+9099: 8d 64 8e                     sta     <a href="#Symtransparent_mode">transparent_mode</a>
+909c: 8d 65 8e                     sta     <a href="#Symoverlay_mode">overlay_mode</a>
+909f: 60                           rts
+
+90a0: b0 a6        <a name="SymCQ_home_cursor">CQ_home_cursor</a>  bcs     <a href="#Symreturn">return</a>            ;^O ^Q -- unused
+90a2: ad 73 8e                     lda     <a href="#SymL8E73">L8E73</a>
+90a5: 85 24                        sta     <a href="#SymMON_CH">MON_CH</a>
+90a7: ad 74 8e                     lda     <a href="#Symksw_handler">ksw_handler</a>-1
+90aa: 85 25                        sta     <a href="#SymMON_CV">MON_CV</a>
+90ac: 4c 24 fc                     jmp     <a href="#SymMON_VTABZ">MON_VTABZ</a>
+
+90af: 90 74        <a name="SymCOR_reverse">COR_reverse</a>     bcc     @return           ;^R -- unused
+90b1: a9 c0                        lda     #$c0              ;^O ^R
+90b3: 8d 64 8e                     sta     <a href="#Symtransparent_mode">transparent_mode</a>
+90b6: a9 60                        lda     #$60
+90b8: 8d 65 8e                     sta     <a href="#Symoverlay_mode">overlay_mode</a>
+90bb: 60                           rts
+
+90bc: b0 06        <a name="SymCS_shift">CS_shift</a>        bcs     <a href="#SymCOS_scroll">COS_scroll</a>
+90be: a9 c0                        lda     #$c0
+90c0: 8d 67 8e                     sta     <a href="#Symlower_case">lower_case</a>
+90c3: 60                           rts
+
+90c4: a9 00        <a name="SymCOS_scroll">COS_scroll</a>      lda     #$00
+90c6: 8d 66 8e                     sta     <a href="#Symwrap_mode">wrap_mode</a>
+90c9: 60                           rts
+
+90ca: 90 59        <a name="SymCOT_transparent">COT_transparent</a> bcc     @return           ;plain ^T -- unused
+90cc: a9 80                        lda     #$80              ;^O ^T
+90ce: 8d 64 8e                     sta     <a href="#Symtransparent_mode">transparent_mode</a>
+90d1: a9 60                        lda     #$60
+90d3: 8d 65 8e                     sta     <a href="#Symoverlay_mode">overlay_mode</a>
+90d6: 60                           rts
+
+90d7: b0 4c        <a name="SymCV_textwin_ul">CV_textwin_ul</a>   bcs     @return           ;^O ^V -- unused
+90d9: a5 24                        lda     <a href="#SymMON_CH">MON_CH</a>
+90db: 65 20                        adc     <a href="#SymMON_WNDLEFT">MON_WNDLEFT</a>
+90dd: c9 28                        cmp     #$28
+90df: 90 02                        bcc     <a href="#SymL90E3">L90E3</a>
+90e1: a9 27                        lda     #$27
+90e3: 85 20        <a name="SymL90E3">L90E3</a>           sta     <a href="#SymMON_WNDLEFT">MON_WNDLEFT</a>
+90e5: 38                           sec
+90e6: a5 21                        lda     <a href="#SymMON_WNDWDTH">MON_WNDWDTH</a>
+90e8: e5 24                        sbc     <a href="#SymMON_CH">MON_CH</a>
+90ea: 85 21                        sta     <a href="#SymMON_WNDWDTH">MON_WNDWDTH</a>
+90ec: a9 00                        lda     #$00
+90ee: 85 24                        sta     <a href="#SymMON_CH">MON_CH</a>
+90f0: a5 25                        lda     <a href="#SymMON_CV">MON_CV</a>
+90f2: c9 18                        cmp     #$18
+90f4: 90 02                        bcc     <a href="#SymL90F8">L90F8</a>
+90f6: a9 17                        lda     #$17
+90f8: 85 22        <a name="SymL90F8">L90F8</a>           sta     <a href="#SymMON_WNDTOP">MON_WNDTOP</a>
+90fa: 2c 72 8e                     bit     <a href="#SymL8E72">L8E72</a>
+90fd: 30 03                        bmi     <a href="#SymL9102">L9102</a>
+90ff: 8d 74 8e                     sta     <a href="#Symksw_handler">ksw_handler</a>-1
+9102: 4c 22 fc     <a name="SymL9102">L9102</a>           jmp     <a href="#SymMON_VTAB">MON_VTAB</a>
+
+9105: b0 1f        <a name="SymCW_textwin_lr">CW_textwin_lr</a>   bcs     <a href="#SymCOW_wrap">COW_wrap</a>
+9107: a5 24                        lda     <a href="#SymMON_CH">MON_CH</a>
+9109: 85 21                        sta     <a href="#SymMON_WNDWDTH">MON_WNDWDTH</a>
+910b: 65 20                        adc     <a href="#SymMON_WNDLEFT">MON_WNDLEFT</a>
+910d: c9 28                        cmp     #$28
+910f: 90 06                        bcc     <a href="#SymL9117">L9117</a>
+9111: a9 27                        lda     #$27
+9113: e5 20                        sbc     <a href="#SymMON_WNDLEFT">MON_WNDLEFT</a>
+9115: 85 21                        sta     <a href="#SymMON_WNDWDTH">MON_WNDWDTH</a>
+9117: e6 21        <a name="SymL9117">L9117</a>           inc     <a href="#SymMON_WNDWDTH">MON_WNDWDTH</a>
+9119: a5 25                        lda     <a href="#SymMON_CV">MON_CV</a>
+911b: c9 18                        cmp     #$18
+911d: 90 02                        bcc     <a href="#SymL9121">L9121</a>
+911f: a9 17                        lda     #$17
+9121: 85 23        <a name="SymL9121">L9121</a>           sta     <a href="#SymMON_WNDBTM">MON_WNDBTM</a>
+9123: e6 23                        inc     <a href="#SymMON_WNDBTM">MON_WNDBTM</a>
+9125: 60           @return         rts
+
+9126: a9 ff        <a name="SymCOW_wrap">COW_wrap</a>        lda     #$ff
+9128: 8d 66 8e                     sta     <a href="#Symwrap_mode">wrap_mode</a>
+912b: 60                           rts
+
+912c: b0 22        <a name="SymCY_textwin_full">CY_textwin_full</a> bcs     <a href="#SymCOY_userA">COY_userA</a>
+912e: a5 20        <a name="SymL912E">L912E</a>           lda     <a href="#SymMON_WNDLEFT">MON_WNDLEFT</a>
+9130: 65 24                        adc     <a href="#SymMON_CH">MON_CH</a>
+9132: 85 24                        sta     <a href="#SymMON_CH">MON_CH</a>
+9134: a9 00                        lda     #$00
+9136: 85 20                        sta     <a href="#SymMON_WNDLEFT">MON_WNDLEFT</a>
+9138: 85 22                        sta     <a href="#SymMON_WNDTOP">MON_WNDTOP</a>
+913a: 2c 72 8e                     bit     <a href="#SymL8E72">L8E72</a>
+913d: 30 06                        bmi     <a href="#SymL9145">L9145</a>
+913f: 8d 73 8e                     sta     <a href="#SymL8E73">L8E73</a>
+9142: 8d 74 8e                     sta     <a href="#Symksw_handler">ksw_handler</a>-1
+9145: a9 28        <a name="SymL9145">L9145</a>           lda     #$28
+9147: 85 21                        sta     <a href="#SymMON_WNDWDTH">MON_WNDWDTH</a>
+9149: a9 18                        lda     #$18
+914b: 85 23                        sta     <a href="#SymMON_WNDBTM">MON_WNDBTM</a>
+914d: 4c 22 fc                     jmp     <a href="#SymMON_VTAB">MON_VTAB</a>
+
+9150: 4c 09 8e     <a name="SymCOY_userA">COY_userA</a>       jmp     <a href="#SymL8E09">L8E09</a>
+
+9153: b0 24        <a name="SymCZ_restore_default">CZ_restore_default</a> bcs  <a href="#SymCOZ_userB">COZ_userB</a>
+9155: a9 00        <a name="SymL9155">L9155</a>           lda     #$00
+9157: a0 12                        ldy     #$12
+9159: 99 62 8e     <a name="SymL9159">L9159</a>           sta     <a href="#Symhires_base">hires_base</a>,y
+915c: 88                           dey
+915d: 10 fa                        bpl     <a href="#SymL9159">L9159</a>
+915f: 20 2e 91                     jsr     <a href="#SymL912E">L912E</a>
+9162: 20 9a 8f                     jsr     <a href="#SymL8F9A">L8F9A</a>
+9165: 20 a5 8f                     jsr     <a href="#SymCOA_primary_hires1">COA_primary_hires1</a>
+9168: a9 25                        lda     #$25
+916a: 8d 0a 8e                     sta     <a href="#SymL8E09">L8E09</a>+1
+916d: 8d 0d 8e                     sta     <a href="#SymL8E0C">L8E0C</a>+1
+9170: a9 91                        lda     #$91
+9172: 8d 0b 8e                     sta     <a href="#SymL8E09">L8E09</a>+2
+9175: 8d 0e 8e                     sta     <a href="#SymL8E0C">L8E0C</a>+2
+9178: 60                           rts
+
+9179: 4c 0c 8e     <a name="SymCOZ_userB">COZ_userB</a>       jmp     <a href="#SymL8E0C">L8E0C</a>
+
+917c: 0e 61 8e     <a name="Symdraw_char">draw_char?</a>      asl     <a href="#Symkey_state">key_state</a>
+917f: b0 a4                        bcs     @return
+9181: 2c 67 8e                     bit     <a href="#Symlower_case">lower_case</a>
+9184: 10 0f                        bpl     <a href="#SymL9195">L9195</a>
+9186: 50 05                        bvc     <a href="#SymL918D">L918D</a>
+9188: 0e 67 8e                     asl     <a href="#Symlower_case">lower_case</a>
+918b: b0 08                        bcs     <a href="#SymL9195">L9195</a>
+918d: c9 41        <a name="SymL918D">L918D</a>           cmp     #$41
+918f: 90 04                        bcc     <a href="#SymL9195">L9195</a>
+9191: c9 5b                        cmp     #$5b
+9193: 90 03                        bcc     <a href="#SymL9198">L9198</a>
+9195: 38           <a name="SymL9195">L9195</a>           sec
+9196: e9 20                        sbc     #$20
+9198: 0a           <a name="SymL9198">L9198</a>           asl     A
+9199: 26 ef                        rol     $ef
+919b: 0a                           asl     A
+919c: 26 ef                        rol     $ef
+919e: 0a                           asl     A
+919f: 26 ef                        rol     $ef
+91a1: 18                           clc
+91a2: 6d 68 8e                     adc     <a href="#Symlower_case">lower_case</a>+1
+91a5: 85 ee                        sta     $ee
+91a7: a5 ef                        lda     $ef
+91a9: 29 07                        and     #$07
+91ab: 6d 69 8e                     adc     <a href="#Symlower_case">lower_case</a>+2
+91ae: 85 ef                        sta     $ef
+91b0: 20 cc 92                     jsr     <a href="#SymL92CC">L92CC</a>
+91b3: 65 24                        adc     <a href="#SymMON_CH">MON_CH</a>
+91b5: 85 2a                        sta     $2a
+91b7: 85 ec                        sta     $ec
+91b9: a5 2b                        lda     $2b
+91bb: 4d 65 8e                     eor     <a href="#Symoverlay_mode">overlay_mode</a>      ;eor $60 flips $20 to $40 and vice versa
+91be: 85 ed                        sta     $ed
+91c0: a4 24                        ldy     <a href="#SymMON_CH">MON_CH</a>
+91c2: a5 ff                        lda     saveA
+91c4: 91 28                        sta     (<a href="#SymMON_BASL">MON_BASL</a>),y
+91c6: a2 00                        ldx     #$00
+91c8: a0 00                        ldy     #$00
+91ca: b1 ee        <a name="SymL91CA">L91CA</a>           lda     ($ee),y
+91cc: 4d 63 8e                     eor     <a href="#Syminverse_video">inverse_video</a>
+91cf: 2c 64 8e                     bit     <a href="#Symtransparent_mode">transparent_mode</a>
+91d2: 10 11                        bpl     <a href="#SymL91E5">L91E5</a>
+91d4: 70 0d                        bvs     <a href="#SymL91E3">L91E3</a>
+91d6: 2c 63 8e                     bit     <a href="#Syminverse_video">inverse_video</a>
+91d9: 70 04                        bvs     <a href="#SymL91DF">L91DF</a>
+91db: 01 ec                        ora     ($ec,x)
+91dd: 50 06                        bvc     <a href="#SymL91E5">L91E5</a>
+
+91df: 21 ec        <a name="SymL91DF">L91DF</a>           and     ($ec,x)
+91e1: 70 02                        bvs     <a href="#SymL91E5">L91E5</a>
+
+91e3: 41 ec        <a name="SymL91E3">L91E3</a>           eor     ($ec,x)
+91e5: 81 2a        <a name="SymL91E5">L91E5</a>           sta     ($2a,x)
+91e7: c8                           iny
+91e8: c0 08                        cpy     #$08
+91ea: b0 0d                        bcs     <a href="#SymL91F9">L91F9</a>
+91ec: a5 2b                        lda     $2b
+91ee: 69 04                        adc     #$04
+91f0: 85 2b                        sta     $2b
+91f2: 4d 65 8e                     eor     <a href="#Symoverlay_mode">overlay_mode</a>
+91f5: 85 ed                        sta     $ed
+91f7: 90 d1                        bcc     <a href="#SymL91CA">L91CA</a>
+91f9: e6 24        <a name="SymL91F9">L91F9</a>           inc     <a href="#SymMON_CH">MON_CH</a>
+91fb: a5 24                        lda     <a href="#SymMON_CH">MON_CH</a>
+91fd: c5 21                        cmp     <a href="#SymMON_WNDWDTH">MON_WNDWDTH</a>
+91ff: 90 20                        bcc     <a href="#SymL9221">L9221</a>
+9201: a9 00        <a name="SymL9201">L9201</a>           lda     #$00
+9203: 85 24                        sta     <a href="#SymMON_CH">MON_CH</a>
+9205: e6 25        <a name="SymCJ_nextline">CJ_nextline?</a>    inc     <a href="#SymMON_CV">MON_CV</a>
+9207: a5 25                        lda     <a href="#SymMON_CV">MON_CV</a>
+9209: c5 23                        cmp     <a href="#SymMON_WNDBTM">MON_WNDBTM</a>
+920b: 90 11                        bcc     <a href="#SymL921E">L921E</a>
+920d: 2c 66 8e                     bit     <a href="#Symwrap_mode">wrap_mode</a>
+9210: 70 08                        bvs     <a href="#SymL921A">L921A</a>
+9212: c6 25                        dec     <a href="#SymMON_CV">MON_CV</a>
+9214: 20 22 92                     jsr     <a href="#SymL9222">L9222</a>
+9217: 4c 70 fc                     jmp     <a href="#SymMON_SCROLL">MON_SCROLL</a>
+
+921a: a5 22        <a name="SymL921A">L921A</a>           lda     <a href="#SymMON_WNDTOP">MON_WNDTOP</a>
+921c: 85 25                        sta     <a href="#SymMON_CV">MON_CV</a>
+921e: 20 24 fc     <a name="SymL921E">L921E</a>           jsr     <a href="#SymMON_VTABZ">MON_VTABZ</a>
+9221: 60           <a name="SymL9221">L9221</a>           rts
+
+9222: a5 22        <a name="SymL9222">L9222</a>           lda     <a href="#SymMON_WNDTOP">MON_WNDTOP</a>
+9224: 48                           pha
+9225: 20 ce 92                     jsr     <a href="#SymL92CE">L92CE</a>
+9228: a5 2a        <a name="SymL9228">L9228</a>           lda     $2a
+922a: 85 ec                        sta     $ec
+922c: a5 2b                        lda     $2b
+922e: 29 e3                        and     #$e3
+9230: 85 ed                        sta     $ed
+9232: 68                           pla
+9233: 18                           clc
+9234: 69 01                        adc     #$01
+9236: c5 23                        cmp     <a href="#SymMON_WNDBTM">MON_WNDBTM</a>
+9238: b0 22                        bcs     <a href="#SymL925C">L925C</a>
+923a: 48                           pha
+923b: 20 ce 92                     jsr     <a href="#SymL92CE">L92CE</a>
+923e: a2 07                        ldx     #$07
+9240: a4 21        <a name="SymL9240">L9240</a>           ldy     <a href="#SymMON_WNDWDTH">MON_WNDWDTH</a>
+9242: 88                           dey
+9243: b1 2a        <a name="SymL9243">L9243</a>           lda     ($2a),y
+9245: 91 ec                        sta     ($ec),y
+9247: 88                           dey
+9248: 10 f9                        bpl     <a href="#SymL9243">L9243</a>
+924a: ca                           dex
+924b: 30 db                        bmi     <a href="#SymL9228">L9228</a>
+924d: 18                           clc
+924e: a5 2b                        lda     $2b
+9250: 69 04                        adc     #$04
+9252: 85 2b                        sta     $2b
+9254: a5 ed                        lda     $ed
+9256: 69 04                        adc     #$04
+9258: 85 ed                        sta     $ed
+925a: d0 e4                        bne     <a href="#SymL9240">L9240</a>
+925c: ad 64 8e     <a name="SymL925C">L925C</a>           lda     <a href="#Symtransparent_mode">transparent_mode</a>
+925f: 48                           pha
+9260: a5 23                        lda     <a href="#SymMON_WNDBTM">MON_WNDBTM</a>
+9262: e9 01                        sbc     #$01
+9264: a0 00                        ldy     #$00
+9266: 8c 64 8e                     sty     <a href="#Symtransparent_mode">transparent_mode</a>
+9269: 20 92 92                     jsr     <a href="#SymL9292">L9292</a>
+926c: 68                           pla
+926d: 8d 64 8e                     sta     <a href="#Symtransparent_mode">transparent_mode</a>
+9270: 60                           rts
+
+9271: a5 22        <a name="SymL9271">L9271</a>           lda     <a href="#SymMON_WNDTOP">MON_WNDTOP</a>
+9273: 85 25                        sta     <a href="#SymMON_CV">MON_CV</a>
+9275: a0 00                        ldy     #$00
+9277: 84 24                        sty     <a href="#SymMON_CH">MON_CH</a>
+9279: f0 04                        beq     <a href="#SymL927F">L927F</a>
+
+927b: a4 24        <a name="SymL927B">L927B</a>           ldy     <a href="#SymMON_CH">MON_CH</a>
+927d: a5 25                        lda     <a href="#SymMON_CV">MON_CV</a>
+927f: 48           <a name="SymL927F">L927F</a>           pha
+9280: 20 92 92                     jsr     <a href="#SymL9292">L9292</a>
+9283: 68                           pla
+9284: 18                           clc
+9285: 69 01                        adc     #$01
+9287: c5 23                        cmp     <a href="#SymMON_WNDBTM">MON_WNDBTM</a>
+9289: a0 00                        ldy     #$00
+928b: 90 f2                        bcc     <a href="#SymL927F">L927F</a>
+928d: 60                           rts
+
+928e: a4 24        <a name="SymL928E">L928E</a>           ldy     <a href="#SymMON_CH">MON_CH</a>
+9290: a5 25                        lda     <a href="#SymMON_CV">MON_CV</a>
+9292: 84 ee        <a name="SymL9292">L9292</a>           sty     $ee
+9294: 20 ce 92                     jsr     <a href="#SymL92CE">L92CE</a>
+9297: a2 07                        ldx     #$07
+9299: ad 63 8e     <a name="SymL9299">L9299</a>           lda     <a href="#Syminverse_video">inverse_video</a>
+929c: 2c 64 8e                     bit     <a href="#Symtransparent_mode">transparent_mode</a>
+929f: 10 15                        bpl     <a href="#SymL92B6">L92B6</a>
+92a1: a5 2a                        lda     $2a
+92a3: 85 ec                        sta     $ec
+92a5: a5 2b                        lda     $2b
+92a7: 4d 65 8e                     eor     <a href="#Symoverlay_mode">overlay_mode</a>
+92aa: 85 ed                        sta     $ed
+92ac: b1 ec                        lda     ($ec),y
+92ae: 2c 64 8e                     bit     <a href="#Symtransparent_mode">transparent_mode</a>
+92b1: 50 03                        bvc     <a href="#SymL92B6">L92B6</a>
+92b3: 4d 63 8e                     eor     <a href="#Syminverse_video">inverse_video</a>
+92b6: 91 2a        <a name="SymL92B6">L92B6</a>           sta     ($2a),y
+92b8: c8                           iny
+92b9: c4 21                        cpy     <a href="#SymMON_WNDWDTH">MON_WNDWDTH</a>
+92bb: 90 dc                        bcc     <a href="#SymL9299">L9299</a>
+92bd: ca                           dex
+92be: 30 0b                        bmi     <a href="#SymL92CB">L92CB</a>
+92c0: a4 ee                        ldy     $ee
+92c2: a5 2b                        lda     $2b
+92c4: 18                           clc
+92c5: 69 04                        adc     #$04
+92c7: 85 2b                        sta     $2b
+92c9: d0 ce                        bne     <a href="#SymL9299">L9299</a>
+92cb: 60           <a name="SymL92CB">L92CB</a>           rts
+
+92cc: a5 25        <a name="SymL92CC">L92CC</a>           lda     <a href="#SymMON_CV">MON_CV</a>
+92ce: 4a           <a name="SymL92CE">L92CE</a>           lsr     A
+92cf: aa                           tax
+92d0: 29 03                        and     #$03              ;$20,$20,$21,$21,$22,$22,$23,$23, repeat
+92d2: 0d 62 8e                     ora     <a href="#Symhires_base">hires_base</a>
+92d5: 85 2b                        sta     $2b
+92d7: bd e0 92                     lda     <a href="#SymL92E0">L92E0</a>,x
+92da: 6a                           ror     A                 ;why??
+92db: 65 20                        adc     <a href="#SymMON_WNDLEFT">MON_WNDLEFT</a>
+92dd: 85 2a                        sta     $2a
+92df: 60                           rts
+
+                   <span style="background-color: #72be72">NOTE: Appears rest of file is data. There is a table at 92e0 which probably</span>
+                   <span style="background-color: #72be72">computes hires address. And there may be character data starting at $9300.</span>
+92e0: 00 00 00 00+ <a name="SymL92E0">L92E0</a>           .bulk   0000000050505050a0a0a0a0 ;I *think* this is 12 bytes (24 lines)
+92ec: b9 a2 a0 d2+                 .align  $0100 (20 bytes)  ;more speculation
+
+                   ; Standard monochrome (1bpp) 7x8 font bitmap, 1 byte per character line, 8
+                   ; consecutive bytes (lines) per character. High bit is unused. Covers 96 high
+                   ; ASCII chars A0-FF.
+                   <img class="vis" alt="vis" src="HRCG.code_IMG/vis000500_00.gif" width="128" height="55"/>
+9300: 00 00 00 00+ <a name="Symbuiltin_font">builtin_font</a>    .bulk   0000000000000000  ; space
+9308: 08 08 08 08+                 .bulk   0808080808000800  ; !
+9310: 14 14 14 00+                 .bulk   1414140000000000  ; "
+9318: 14 14 3e 14+                 .bulk   14143e143e141400  ; #
+9320: 08 3c 0a 1c+                 .bulk   083c0a1c281e0800  ; $
+9328: 06 26 10 08+                 .bulk   0626100804323000  ; etc.
+9330: 04 0a 0a 04+                 .bulk   040a0a042a122c00
+9338: 08 08 08 00+                 .bulk   0808080000000000
+9340: 08 04 02 02+                 .bulk   0804020202040800
+9348: 08 10 20 20+                 .bulk   0810202020100800
+9350: 08 2a 1c 08+                 .bulk   082a1c081c2a0800
+9358: 00 08 08 3e+                 .bulk   0008083e08080000
+9360: 00 00 00 00+                 .bulk   0000000008080400
+9368: 00 00 00 3e+                 .bulk   0000003e00000000
+9370: 00 00 00 00+                 .bulk   0000000000000800
+9378: 00 20 10 08+                 .bulk   0020100804020000
+9380: 1c 22 32 2a+                 .bulk   1c22322a26221c00
+9388: 08 0c 08 08+                 .bulk   080c080808081c00
+9390: 1c 22 20 18+                 .bulk   1c22201804023e00
+9398: 3e 20 10 18+                 .bulk   3e20101820221c00
+93a0: 10 18 14 12+                 .bulk   101814123e101000
+93a8: 3e 02 1e 20+                 .bulk   3e021e2020221c00
+93b0: 38 04 02 1e+                 .bulk   3804021e22221c00
+93b8: 3e 20 10 08+                 .bulk   3e20100804040400
+93c0: 1c 22 22 1c+                 .bulk   1c22221c22221c00
+93c8: 1c 22 22 3c+                 .bulk   1c22223c20100e00
+93d0: 00 00 08 00+                 .bulk   0000080008000000
+93d8: 00 00 08 00+                 .bulk   0000080008080400
+93e0: 10 08 04 02+                 .bulk   1008040204081000
+93e8: 00 00 3e 00+                 .bulk   00003e003e000000
+93f0: 04 08 10 20+                 .bulk   0408102010080400
+93f8: 1c 22 10 08+                 .bulk   1c22100808000800
+9400: 1c 22 2a 3a+                 .bulk   1c222a3a1a023c00
+9408: 08 14 22 22+                 .bulk   081422223e222200
+9410: 1e 22 22 1e+                 .bulk   1e22221e22221e00
+9418: 1c 22 02 02+                 .bulk   1c22020202221c00
+9420: 1e 22 22 22+                 .bulk   1e22222222221e00
+9428: 3e 02 02 1e+                 .bulk   3e02021e02023e00
+9430: 3e 02 02 1e+                 .bulk   3e02021e02020200
+9438: 3c 02 02 02+                 .bulk   3c02020232223c00
+9440: 22 22 22 3e+                 .bulk   2222223e22222200
+9448: 1c 08 08 08+                 .bulk   1c08080808081c00
+9450: 20 20 20 20+                 .bulk   2020202020221c00
+9458: 22 12 0a 06+                 .bulk   22120a060a122200
+9460: 02 02 02 02+                 .bulk   0202020202023e00
+9468: 22 36 2a 2a+                 .bulk   22362a2a22222200
+9470: 22 22 26 2a+                 .bulk   2222262a32222200
+9478: 1c 22 22 22+                 .bulk   1c22222222221c00
+9480: 1e 22 22 1e+                 .bulk   1e22221e02020200
+9488: 1c 22 22 22+                 .bulk   1c2222222a122c00
+9490: 1e 22 22 1e+                 .bulk   1e22221e0a122200
+9498: 1c 22 02 1c+                 .bulk   1c22021c20221c00
+94a0: 3e 08 08 08+                 .bulk   3e08080808080800
+94a8: 22 22 22 22+                 .bulk   2222222222221c00
+94b0: 22 22 22 22+                 .bulk   2222222222140800
+94b8: 22 22 22 2a+                 .bulk   2222222a2a362200
+94c0: 22 22 14 08+                 .bulk   2222140814222200
+94c8: 22 22 14 08+                 .bulk   2222140808080800
+94d0: 3e 20 10 08+                 .bulk   3e20100804023e00
+94d8: 3e 06 06 06+                 .bulk   3e06060606063e00
+94e0: 00 02 04 08+                 .bulk   0002040810200000
+94e8: 3e 30 30 30+                 .bulk   3e30303030303e00
+94f0: 00 00 08 14+                 .bulk   0000081422000000
+94f8: 00 00 00 00+                 .bulk   000000000000007f
+9500: 04 08 10 00+                 .bulk   0408100000000000
+9508: 00 00 1c 20+                 .bulk   00001c203c223c00
+9510: 02 02 1e 22+                 .bulk   02021e2222221e00
+9518: 00 00 3c 02+                 .bulk   00003c0202023c00
+9520: 20 20 3c 22+                 .bulk   20203c2222223c00
+9528: 00 00 1c 22+                 .bulk   00001c223e023c00
+9530: 18 24 04 1e+                 .bulk   1824041e04040400
+9538: 00 00 1c 22+                 .bulk   00001c22223c201c
+9540: 02 02 1e 22+                 .bulk   02021e2222222200
+9548: 08 00 0c 08+                 .bulk   08000c0808081c00
+9550: 10 00 18 10+                 .bulk   100018101010120c
+9558: 02 02 22 12+                 .bulk   020222120e122200
+9560: 0c 08 08 08+                 .bulk   0c08080808081c00
+9568: 00 00 36 2a+                 .bulk   0000362a2a2a2200
+9570: 00 00 1e 22+                 .bulk   00001e2222222200
+9578: 00 00 1c 22+                 .bulk   00001c2222221c00
+9580: 00 00 1e 22+                 .bulk   00001e22221e0202
+9588: 00 00 3c 22+                 .bulk   00003c22223c2020
+9590: 00 00 3a 06+                 .bulk   00003a0602020200
+9598: 00 00 3c 02+                 .bulk   00003c021c201e00
+95a0: 04 04 1e 04+                 .bulk   04041e0404241800
+95a8: 00 00 22 22+                 .bulk   0000222222322c00
+95b0: 00 00 22 22+                 .bulk   0000222222140800
+95b8: 00 00 22 22+                 .bulk   000022222a2a3600
+95c0: 00 00 22 14+                 .bulk   0000221408142200
+95c8: 00 00 22 22+                 .bulk   00002222223c201c
+95d0: 00 00 3e 10+                 .bulk   00003e1008043e00
+95d8: 38 0c 0c 06+                 .bulk   380c0c060c0c3800
+95e0: 08 08 08 08+                 .bulk   0808080808080808
+95e8: 0e 18 18 30+                 .bulk   0e18183018180e00
+95f0: 2c 1a 00 00+                 .bulk   2c1a000000000000
+95f8: 7f 7f 7f 7f+                 .bulk   7f7f7f7f7f7f7f7f
+</pre>
+
+
+    </div>
+
+    <!-- SymbolTable is optional; remove this entire section from the template if you don't want it -->
+    <div id="symbol-table">
+        <h2>Symbol Table</h2>
+<p>No exported symbols found.</p>
+
+    </div>
+
+    <div id="footer">
+        <hr/>
+        <p>HTML generated by <a href="https://6502bench.com/">6502bench SourceGen</a> v1.7.3
+        on 2021/02/02 <!--17:58:56 -06:00--></p>
+        <p>Expression style: Common</p>
+        <!-- parameters: cols=16,8,18,100;extraCols=Address,Bytes;byteSpc=True;commaBulk=False;nonuPfx='@';varPfx='';labelBrk=False;notes=True;gfx=True;opWrap=64 -->
+    </div>
+</body>
+</html>

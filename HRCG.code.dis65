@@ -10,7 +10,7 @@
 "EntryFlags":32702671,
 "AutoLabelStyle":"Simple",
 "AnalysisParams":{
-"AnalyzeUncategorizedData":false,
+"AnalyzeUncategorizedData":true,
 "DefaultTextScanMode":"LowHighAscii",
 "MinCharsForString":4,
 "SeekNearbyTargets":true,
