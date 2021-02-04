@@ -26,6 +26,23 @@
 "ExtensionScriptFileIdentifiers":["RT:Apple/ProDOS8.cs",
 "RT:Apple/VisHiRes.cs"],
 "ProjectSyms":{
+"blink_delay":{
+"DataDescriptor":{
+"Length":1,
+"Format":"NumericLE",
+"SubFormat":"Hex",
+"SymbolRef":null},
+
+"Comment":"cursor blink delay",
+"HasWidth":false,
+"Direction":"ReadWrite",
+"MultiMask":null,
+"Label":"blink_delay",
+"Value":80,
+"Source":"Project",
+"Type":"Constant",
+"LabelAnno":"None"},
+
 "MON_BELL":{
 "DataDescriptor":{
 "Length":1,
@@ -194,14 +211,48 @@
 "102":"$FF if wrap mode, $00 if scroll",
 "103":"$80=lower case, $00=upper",
 "104":"pointer to active charset",
+"117":"restore char to text screen",
+"119":"we reuse X as a counter",
+"121":"text screen low byte conveniently",
+"123":"matches low byte for hires line text*8",
+"125":"convert text screen hi byte to hires line",
+"127":"text 04..07 -\u003e 1C..1F",
+"129":"-\u003e 3C..3F (page 1) or 5C..5F (page 2) ",
+"132":"== 7th line of each 8-line char",
+"134":"initial countdown -- invert almost immediately",
+"136":"grab the 7th (cursor) line to invert it",
+"138":"also save it on the stack",
+"139":"count up \"random\" KEYIN value 0000..FFFF",
+"141":"check for 8-bit wrap",
+"143":"and propagate to high byte",
+"145":"did we cycle to $FFFF X times?",
+"146":"no, not yet time to invert cursor",
+"148":"invert cursor line",
+"150":"and write it to screen",
+"152":"countdown until next invert",
+"154":"key pressed?",
+"157":"no, continue cycling",
+"159":"an eternity later, a key is pressed",
+"160":"restore the original 7th line",
+"163":"??",
+"166":"??",
 "168":"get keypress",
-"174":"if no key pressed",
+"171":"clear keyboard strobe",
+"174":"if stack value \u003c $f8 (BIT preserved carry)",
 "176":"save keypress",
-"180":"bit 7 was set (see below)",
-"188":"set bit 7 for next time",
+"177":"esc flag (bit 7) set earlier?",
+"180":"yes, this is ESC arg",
+"182":"ESC pressed now?",
+"186":"yes, ESC pressed",
+"188":"set ESC flag for next time",
 "191":"always",
-"193":"CR",
-"202":"restore last keypress",
+"193":"return pressed?",
+"200":"restore Y (horiz pos)",
+"202":"restore A (the keypress)",
+"203":"restore X",
+"220":"\u0027J\u0027 -- do nothing",
+"222":"disable escape state ($80-\u003e$00)",
+"225":"ESC-@ ?",
 "281":"preserve A/X/Y",
 "299":"was set to $80 by Ctrl-A keypress",
 "302":"so if carry set after ASL, key is arg to Ctrl-A",
@@ -222,17 +273,19 @@
 "382":"vector end",
 "383":"^O ^A -- primary screen 1",
 "385":"set flag indicating Ctrl-A was pressed",
-"391":"get the digit pressed after ^A",
-"395":"use internal charset if not 1..9",
+"391":"convert digit 1..9 ($31..39) to $00..$08",
+"393":"check if char was \u003c 1 or \u003e 9",
+"395":"via unsigned cmp \u003e= $09, so $00..$08 are valid",
 "397":"X = low byte of lowest charset in memory",
-"403":"A = A * 3 via temp (3 pages per charset)",
+"400":"now compute page offset; 3 pages per charset",
+"403":"A = A * 3 via temp",
 "405":"A = high byte of desired charset",
 "408":"questionable -- tests for zero page?",
 "410":"select builtin charset, usually when 0 pressed",
 "421":"write to hires 1 ($2000) now",
 "461":"write to hires 2 ($4000) now",
 "467":"^O ^C -- complement",
-"548":"sync the text screen",
+"545":"sync the text screen",
 "553":"sync the text screen",
 "628":"^O ^N -- unused",
 "636":"second ^O -- overstrike",
@@ -319,7 +372,7 @@
 "BackgroundColor":0},
 
 "9":{
-"Text":"Vectors for user subroutines A (^O ^Y) and B (^O ^Z).\r\nThe user pokes these with the desired addresses.",
+"Text":"Vectors for user subroutines A (^O ^Y) and B (^O ^Z).\r\nThe user pokes these with the desired addresses. They are\r\nalso initialized on startup and when defaults are restored,\r\nso the value here is arbitrary.",
 "BoxMode":false,
 "MaxWidth":80,
 "BackgroundColor":0},
@@ -331,7 +384,43 @@
 "BackgroundColor":0},
 
 "391":{
-"Text":"Process ^A argument, the charset number to activate. Anything other than 1..9 selects the builtin charset. 1 selects the lowest charset in memory, 2 selects lowest + $0300, and so on.\r\n\r\nThere is no further bounds check on the charset number, so if you select charset 4 when 3 are loaded, you will get garbage. (Since LOADHRCG loads charsets directly below HRCG, charset 4 would be HRCG code and charset 5 is $100 into the builtin charset, which effectively shifts uppercase to lowercase!)",
+"Text":"\r\nProcess ^A argument, the charset number to activate. Anything other than 1..9 selects the builtin charset. 1 selects the lowest charset in memory, 2 selects lowest + $0300, and so on.\r\n\r\nThere is no further bounds check on the charset number, so if you select charset 4 when 3 are loaded, you will get garbage. (Since LOADHRCG loads charsets directly below HRCG, charsets 4 and 5 would be HRCG code and charset 6 is $100 into the builtin charset, which effectively shifts uppercase to lowercase!)\r\n\r\n",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"872":{
+"Text":"Amusingly, this sets the user jump vectors to a different RTS (return1)\r\nthan the one included in the file (return).",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"148":{
+"Text":"Blink the cursor.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"117":{
+"Text":"\r\nKSW handler\r\n\r\nWait for a keypress, blinking the cursor (an underscore) while waiting. The \"random\" KEYIN value is updated similarly to the monitor ROM, though at a different rate. Also handle ESC state and commands.\r\n\r\nOn entry, A is the char that was present on the text screen (the caller may have overwritten it with a cursor, and standard KSW restores it). Y is the horizontal cursor position (MON_CH).\r\n\r\nOn exit, A is the key pressed. X and Y are preserved.\r\n\r\n",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"206":{
+"Text":"Handle key pressed in escape mode (in accumulator).",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"222":{
+"Text":"Keypress is not IJKM (cursor keys). Disable ESC state going forward.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"263":{
+"Text":"After ESC, ABCD and IJKM are cursor movement synonyms, except ABCD exits escape mode after one keypress, and IJKM remains in escape mode.",
 "BoxMode":false,
 "MaxWidth":80,
 "BackgroundColor":0}},
@@ -345,6 +434,24 @@
 
 "100":{
 "Text":"Looks like a bitfield. If bit 7 ($80) is set, character will overstrike (i.e. the background is ignored). If bit 6 ($40) is set, character will complement (in the shape of its fg or bg).  Apparently, \"overstrike\" and \"transparent\" modes ($80) are identical except sourcing from different pages; so are \"complement\" and \"reverse\" ($C0) modes. They are probably named in this odd way for mnemonic reasons, matching their control chars.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":-7278960},
+
+"163":{
+"Text":"TODO -- why stack lookbehind",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":-7278960},
+
+"200":{
+"Text":"Need to verify MON_CH is not updated. It\u0027s not clear it\u0027s absolutely necessary to restore Y based on the ROM. In particular, look at ESC-@ and cursor movement.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":-18751},
+
+"220":{
+"Text":"How does doing nothing work for ESC J?",
 "BoxMode":false,
 "MaxWidth":80,
 "BackgroundColor":-7278960},
@@ -651,10 +758,10 @@
 "LabelAnno":"None"},
 
 "805":{
-"Label":"return",
+"Label":"return1",
 "Value":37157,
 "Source":"User",
-"Type":"NonUniqueLocalAddr",
+"Type":"GlobalAddr",
 "LabelAnno":"None"},
 
 "708":{
@@ -788,6 +895,125 @@
 "Value":36456,
 "Source":"User",
 "Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"853":{
+"Label":"set_defaults",
+"Value":37205,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"857":{
+"Label":"loop",
+"Value":37209,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"139":{
+"Label":"jiffy",
+"Value":36491,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"154":{
+"Label":"checkkey",
+"Value":36506,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"202":{
+"Label":"doneA",
+"Value":36554,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"203":{
+"Label":"doneX",
+"Value":36555,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"96":{
+"Label":"esc_state",
+"Value":36448,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"206":{
+"Label":"esc_char",
+"Value":36558,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"222":{
+"Label":"not_esc_ijkm",
+"Value":36574,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"235":{
+"Label":"not_esc_null",
+"Value":36587,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"245":{
+"Label":"not_esc_e",
+"Value":36597,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"255":{
+"Label":"not_esc_f",
+"Value":36607,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"268":{
+"Label":"esc_c_or_m",
+"Value":36620,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"263":{
+"Label":"esc_a_or_k",
+"Value":36615,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"200":{
+"Label":"doneY",
+"Value":36552,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"193":{
+"Label":"check_cr",
+"Value":36545,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"1166":{
+"Label":"cr_pressed",
+"Value":37518,
+"Source":"User",
+"Type":"GlobalAddr",
 "LabelAnno":"None"}},
 
 "OperandFormats":{
@@ -838,6 +1064,62 @@
 "SymbolRef":{
 "Label":"builtin_charset",
 "Part":"Low"}},
+
+"152":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Symbol",
+"SymbolRef":{
+"Label":"blink_delay",
+"Part":"Low"}},
+
+"206":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"HighAscii",
+"SymbolRef":null},
+
+"210":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"HighAscii",
+"SymbolRef":null},
+
+"216":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"HighAscii",
+"SymbolRef":null},
+
+"225":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"HighAscii",
+"SymbolRef":null},
+
+"235":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"HighAscii",
+"SymbolRef":null},
+
+"245":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"HighAscii",
+"SymbolRef":null},
+
+"255":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"HighAscii",
+"SymbolRef":null},
+
+"259":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"HighAscii",
+"SymbolRef":null},
 
 "329":{
 "Length":2,
@@ -1069,6 +1351,22 @@
 "SubFormat":"Symbol",
 "SymbolRef":{
 "Label":"builtin_charset",
+"Part":"High"}},
+
+"872":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Symbol",
+"SymbolRef":{
+"Label":"return1",
+"Part":"Low"}},
+
+"880":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Symbol",
+"SymbolRef":{
+"Label":"return1",
 "Part":"High"}},
 
 "1248":{
@@ -1660,6 +1958,59 @@
 "SymbolRef":null}},
 
 "LvTables":{
+"117":{
+"Variables":[{
+"DataDescriptor":{
+"Length":1,
+"Format":"NumericLE",
+"SubFormat":"Hex",
+"SymbolRef":null},
+
+"Comment":"",
+"HasWidth":true,
+"Direction":"ReadWrite",
+"MultiMask":null,
+"Label":"basl",
+"Value":42,
+"Source":"Variable",
+"Type":"ExternalAddr",
+"LabelAnno":"None"},
+
+{
+"DataDescriptor":{
+"Length":1,
+"Format":"NumericLE",
+"SubFormat":"Hex",
+"SymbolRef":null},
+
+"Comment":"",
+"HasWidth":true,
+"Direction":"ReadWrite",
+"MultiMask":null,
+"Label":"bash",
+"Value":43,
+"Source":"Variable",
+"Type":"ExternalAddr",
+"LabelAnno":"None"},
+
+{
+"DataDescriptor":{
+"Length":1,
+"Format":"NumericLE",
+"SubFormat":"Hex",
+"SymbolRef":null},
+
+"Comment":"",
+"HasWidth":true,
+"Direction":"ReadWrite",
+"MultiMask":null,
+"Label":"saveX",
+"Value":235,
+"Source":"Variable",
+"Type":"ExternalAddr",
+"LabelAnno":"None"}],
+"ClearPrevious":false},
+
 "281":{
 "Variables":[{
 "DataDescriptor":{
