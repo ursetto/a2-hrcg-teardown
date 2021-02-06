@@ -205,12 +205,16 @@
 "63":"actually enable graphics mode",
 "97":"keypress state. $80 after ^A, $40 after ^O, or $00",
 "98":"$20 (hires1) or $40 (hires2)",
-"99":"$80 if inverse video active, $00 otherwise",
+"99":"$7f if inverse video active, $00 otherwise",
 "100":"$80=overstrike, $C0=complement, $00=no mask",
 "101":"$60 to use second screen for overlay (^O ^T/^R)",
 "102":"$FF if wrap mode, $00 if scroll",
 "103":"$80=lower case, $00=upper",
 "104":"pointer to active charset",
+"106":"save 8 bytes above during block mode",
+"114":"$ff=block mode on, $00=off",
+"115":"home col in block mode, or else $00",
+"116":"home row in block mode, or else $00",
 "117":"restore char to text screen",
 "119":"we reuse X as a counter",
 "121":"text screen low byte conveniently",
@@ -283,8 +287,14 @@
 "408":"questionable -- tests for zero page?",
 "410":"select builtin charset, usually when 0 pressed",
 "421":"write to hires 1 ($2000) now",
+"439":"length of variable area",
+"441":"save variables",
+"444":"for when we delimit block",
 "461":"write to hires 2 ($4000) now",
 "467":"^O ^C -- complement",
+"501":"length of variable area",
+"503":"restore original variables",
+"506":"saved during block begin",
 "545":"sync the text screen",
 "553":"sync the text screen",
 "628":"^O ^N -- unused",
@@ -298,9 +308,33 @@
 "714":"plain ^T -- unused",
 "716":"^O ^T",
 "727":"^O ^V -- unused",
+"831":"set to $00 when not in block mode",
+"834":"but should already have been $00 outside block mode",
+"855":"zero out 13 bytes of variable data",
 "955":"eor $60 flips $20 to $40 and vice versa",
-"1232":"$20,$20,$21,$21,$22,$22,$23,$23, repeat",
-"1242":"why??",
+"978":"if bit 7 clear",
+"980":"if bit 6 set",
+"982":"is inverse_video set ($7f)",
+"985":"yes, bit 6 set when $7f",
+"989":"always",
+"1006":"(carry is clear)",
+"1145":"always",
+"1151":"preserve line #",
+"1157":"next line",
+"1159":"until end of window",
+"1161":"start at col 0",
+"1177":"load $7f or $00 for opaque mode",
+"1183":"if opaque, skip to storing",
+"1228":"get current text row",
+"1230":"div by 2 *and* set carry if odd",
+"1231":"save for indexing below",
+"1232":"$20,$20,$21,$21,$22,$22,$23,$23, then repeat",
+"1234":"(or $40,$40,$41... if page 2)",
+"1237":"is the high byte",
+"1239":"index is row/2",
+"1242":"/2; carry from LSR becomes high bit",
+"1243":"adjust for window left (ROR cleared carry)",
+"1245":"is the low byte",
 "1248":"12 bytes (24 lines)",
 "1260":"more speculation",
 "1280":" space",
@@ -422,6 +456,30 @@
 "263":{
 "Text":"After ESC, ABCD and IJKM are cursor movement synonyms, except ABCD exits escape mode after one keypress, and IJKM remains in escape mode.",
 "BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"1151":{
+"Text":"On entry, A/Y are the row/col to begin clearing from. Clears from this position to bottom of window.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"1177":{
+"Text":"If transparent mode is disabled, we just want to clear by writing 7 black (normal, $00)  or white (inverse, $7f) pixels. This conveniently corresponds to the value of inverse_video.  ",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"1242":{
+"Text":"00, 50, a0 in table become 00, 28, 50 (even rows) or 80, a8, d0 (odd rows).",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"1228":{
+"Text":"Compute hires base address of a text line, the first line of every 8 line character; i.e. 0, 8, 16, ...\r\n\r\nThe high byte is the same for even/odd pairs, so we divide the row by 2; then take this modulo 4 and OR in the hires page.\r\n\r\nFor even/odd pairs the low byte is the same but with bit 7 clear (even) or set (odd). We can use a 12-byte (24/2) table lookup and set bit 7 according to even/odd.\r\n\r\nThe trick is the LSR A preserves this even/odd information in the carry, which is still available when we reach the ROR A, which rotates the carry into the high bit, exactly as we needed. The byte values in the address table are doubled to account for the ROR. So, for the 24 text lines, the hires address base will go\r\n\r\n2000, 2080, 2100, 2180, 2200, 2280, 2300, 2380,       0..7\r\n2028, 20a8, 2128, 21a8, 2228, 22a8, 2328, 23a8,       8..15\r\n2050, 20d0, 2150, 21d0, 2250, 22d0, 2350, 23d0        16..23\r\n\r\nas expected for each 8 line interval on the hires screen.",
+"BoxMode":true,
 "MaxWidth":80,
 "BackgroundColor":0}},
 
@@ -828,7 +886,7 @@
 "LabelAnno":"None"},
 
 "98":{
-"Label":"hires_base",
+"Label":"hires_page",
 "Value":36450,
 "Source":"User",
 "Type":"GlobalAddr",
@@ -905,7 +963,7 @@
 "LabelAnno":"None"},
 
 "857":{
-"Label":"loop",
+"Label":"zero",
 "Value":37209,
 "Source":"User",
 "Type":"NonUniqueLocalAddr",
@@ -1014,7 +1072,105 @@
 "Value":37518,
 "Source":"User",
 "Type":"GlobalAddr",
-"LabelAnno":"None"}},
+"LabelAnno":"None"},
+
+"1137":{
+"Label":"clear_home",
+"Value":37489,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"1151":{
+"Label":"clear_lines",
+"Value":37503,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"Uncertain"},
+
+"1147":{
+"Label":"clear_to_pos",
+"Value":37499,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"Uncertain"},
+
+"1170":{
+"Label":"clear_line",
+"Value":37522,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"Uncertain"},
+
+"1230":{
+"Label":"compute_base",
+"Value":37582,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"1228":{
+"Label":"compute_cur_base",
+"Value":37580,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"814":{
+"Label":"textwin_full",
+"Value":37166,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"106":{
+"Label":"var_save",
+"Value":36458,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"114":{
+"Label":"block_mode",
+"Value":36466,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"115":{
+"Label":"block_ch",
+"Value":36467,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"116":{
+"Label":"block_cv",
+"Value":36468,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"837":{
+"Label":"block",
+"Value":37189,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"1206":{
+"Label":"store",
+"Value":37558,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"991":{
+"Label":"invert",
+"Value":37343,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"Uncertain"}},
 
 "OperandFormats":{
 "7":{
@@ -1064,6 +1220,12 @@
 "SymbolRef":{
 "Label":"builtin_charset",
 "Part":"Low"}},
+
+"106":{
+"Length":8,
+"Format":"Junk",
+"SubFormat":"None",
+"SymbolRef":null},
 
 "152":{
 "Length":2,
@@ -1352,6 +1514,42 @@
 "SymbolRef":{
 "Label":"builtin_charset",
 "Part":"High"}},
+
+"781":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Decimal",
+"SymbolRef":null},
+
+"785":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Decimal",
+"SymbolRef":null},
+
+"795":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Decimal",
+"SymbolRef":null},
+
+"799":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Decimal",
+"SymbolRef":null},
+
+"837":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Decimal",
+"SymbolRef":null},
+
+"841":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Decimal",
+"SymbolRef":null},
 
 "872":{
 "Length":2,
@@ -2077,6 +2275,42 @@
 "Direction":"ReadWrite",
 "MultiMask":null,
 "Label":"temp",
+"Value":238,
+"Source":"Variable",
+"Type":"ExternalAddr",
+"LabelAnno":"None"}],
+"ClearPrevious":false},
+
+"892":{
+"Variables":[{
+"DataDescriptor":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Hex",
+"SymbolRef":null},
+
+"Comment":"",
+"HasWidth":true,
+"Direction":"ReadWrite",
+"MultiMask":null,
+"Label":"screen",
+"Value":236,
+"Source":"Variable",
+"Type":"ExternalAddr",
+"LabelAnno":"None"},
+
+{
+"DataDescriptor":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Hex",
+"SymbolRef":null},
+
+"Comment":"",
+"HasWidth":true,
+"Direction":"ReadWrite",
+"MultiMask":null,
+"Label":"charset",
 "Value":238,
 "Source":"Variable",
 "Type":"ExternalAddr",
