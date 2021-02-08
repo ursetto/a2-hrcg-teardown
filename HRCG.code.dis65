@@ -308,23 +308,114 @@
 "714":"plain ^T -- unused",
 "716":"^O ^T",
 "727":"^O ^V -- unused",
+"729":"window-relative",
+"733":"Ensure left is \u003c 40",
+"754":"Ensure top is \u003c 24",
+"767":"update block top if block mode",
 "831":"set to $00 when not in block mode",
 "834":"but should already have been $00 outside block mode",
 "855":"zero out 13 bytes of variable data",
+"892":"if waiting for arg to ^O,",
+"895":"  cancel ^O and return",
+"897":"enforced lowercase?",
+"900":"no, unmodified char",
+"902":"lowercase, but shift disengaged",
+"904":"shift engaged; mode $c0-\u003e$80 sets followup lowercase",
+"907":"always (unmodified initial char)",
+"911":"key \u003c A, do not lowercase",
+"913":"\u0027Z\u0027+1",
+"915":"A-Z -- make it lowercase",
+"917":"key is unmodified, so",
+"918":"align $20..$7f to $00..$5f",
+"920":"Multiply A by 2",
+"921":"shift the overflow into high byte",
+"923":"by 4",
+"924":"shift again",
+"926":"by 8",
+"927":"shift again",
+"930":"16-bit add (low)",
+"933":"char bitmap (low)",
+"935":"get high byte from 8x8 multiply",
+"937":"limit to the 3 shifted bits",
+"939":"16-bit add (high)",
+"942":"char bitmap (high)",
+"944":"get hires addr of first col of this row",
+"947":"A is basl, add column position",
+"949":"basl += col; dest addr to write to",
+"951":"\u003cscreen = basl; source addr when combining",
 "955":"eor $60 flips $20 to $40 and vice versa",
-"978":"if bit 7 clear",
+"958":"\u003escreen = bash, adjusted for source hires page",
+"962":"recall original keypress value",
+"964":"and store to text screen",
+"966":"for (zp) indexing, X always 0",
+"968":"line number in char",
+"970":"load 7-pixel char line",
+"972":"flip all bits if inverted",
+"975":"check overstrike method",
+"978":"if bit 7 clear, opaque",
 "980":"if bit 6 set",
 "982":"is inverse_video set ($7f)",
 "985":"yes, bit 6 set when $7f",
+"987":"combine (OR, blend) with source pixels",
 "989":"always",
+"991":"combine (AND) source with char mask",
+"995":"flip (XOR) source with char mask (X=0)",
+"997":"update screen (X=0)",
+"999":"next char line",
+"1002":"wrote 8 lines, done",
 "1006":"(carry is clear)",
+"1008":"next hires line is +$0400",
+"1010":"adjust source addr for overlay mode again",
+"1013":"update source addr",
+"1015":"always",
+"1017":"update horiz pos",
+"1021":"did we exceed window width?",
+"1023":"no, we are done",
+"1025":"reset col to beginning of line",
+"1029":"go to next line",
+"1033":"check vertical pos",
+"1035":"still within window",
+"1037":"in wrap mode (bit 6)?",
+"1040":"yes; wrap to top",
+"1042":"scrolling; adjust pos to last line",
+"1044":"scroll hires window",
+"1047":"scroll text window and exit",
+"1050":"set vert pos to top of window",
+"1054":"reposition text mode cursor",
+"1060":"save row number",
+"1070":"return bash line 7 to line 0",
+"1072":"inc dest line by 8 (row by 1)",
+"1074":"restore row number",
+"1076":"inc row",
+"1078":"did we hit bottom?",
+"1080":"yes, finish up",
+"1082":"save row number (for next loop, above)",
+"1083":"set basl/bash for next line",
+"1086":"8 rows, char height",
+"1088":"start at end of window line",
+"1091":"copy byte",
+"1095":"and move from right to left",
+"1096":"until beginning of line",
+"1098":"copied all 8 lines?",
+"1099":"yes, next row (basl/h not inc\u0027d)",
+"1114":"start next row",
 "1145":"always",
 "1151":"preserve line #",
 "1157":"next line",
 "1159":"until end of window",
 "1161":"start at col 0",
+"1170":"save starting column",
+"1175":"clear 8 hires lines",
 "1177":"load $7f or $00 for opaque mode",
 "1183":"if opaque, skip to storing",
+"1209":"end of screen?",
+"1211":"nope, keep clearing line",
+"1213":"one line complete",
+"1214":"if all lines complete, done",
+"1216":"restore starting column",
+"1221":"hi byte adds $04 per line",
+"1223":"update hi byte of screen address",
+"1225":"next line -- always",
 "1228":"get current text row",
 "1230":"div by 2 *and* set carry if odd",
 "1231":"save for indexing below",
@@ -336,7 +427,7 @@
 "1243":"adjust for window left (ROR cleared carry)",
 "1245":"is the low byte",
 "1248":"12 bytes (24 lines)",
-"1260":"more speculation",
+"1260":"unused area",
 "1280":" space",
 "1288":" !",
 "1296":" \"",
@@ -388,7 +479,7 @@
 "BackgroundColor":0},
 
 "663":{
-"Text":"Set overwrite (\"print\") mode, the default mode, where character bg and fg completely replace underlying graphics.",
+"Text":"Set overwrite (\"print\") mode, the default mode, where character bg and fg both replace underlying graphics.",
 "BoxMode":false,
 "MaxWidth":80,
 "BackgroundColor":0},
@@ -478,8 +569,86 @@
 "BackgroundColor":0},
 
 "1228":{
-"Text":"Compute hires base address of a text line, the first line of every 8 line character; i.e. 0, 8, 16, ...\r\n\r\nThe high byte is the same for even/odd pairs, so we divide the row by 2; then take this modulo 4 and OR in the hires page.\r\n\r\nFor even/odd pairs the low byte is the same but with bit 7 clear (even) or set (odd). We can use a 12-byte (24/2) table lookup and set bit 7 according to even/odd.\r\n\r\nThe trick is the LSR A preserves this even/odd information in the carry, which is still available when we reach the ROR A, which rotates the carry into the high bit, exactly as we needed. The byte values in the address table are doubled to account for the ROR. So, for the 24 text lines, the hires address base will go\r\n\r\n2000, 2080, 2100, 2180, 2200, 2280, 2300, 2380,       0..7\r\n2028, 20a8, 2128, 21a8, 2228, 22a8, 2328, 23a8,       8..15\r\n2050, 20d0, 2150, 21d0, 2250, 22d0, 2350, 23d0        16..23\r\n\r\nas expected for each 8 line interval on the hires screen.",
+"Text":"Compute hires base address of a text line, the first line of every 8 line character; i.e. 0, 8, 16, ... The line# is the current text row. On exit, basl/bash has the address, and A has a copy of basl. \r\n\r\nThe high byte is the same for even/odd pairs, so we divide the row by 2; then take this modulo 4 and OR in the hires page.\r\n\r\nFor even/odd pairs the low byte is the same but with bit 7 clear (even) or set (odd). We can use a 12-byte (24/2) table lookup and set bit 7 according to even/odd.\r\n\r\nThe trick is the LSR A preserves this even/odd information in the carry, which is still available when we reach the ROR A, which rotates the carry into the high bit, exactly as we needed. The byte values in the address table are doubled to account for the ROR. So, for the 24 text lines, the hires address base will go\r\n\r\n2000, 2080, 2100, 2180, 2200, 2280, 2300, 2380,       0..7\r\n2028, 20a8, 2128, 21a8, 2228, 22a8, 2328, 23a8,       8..15\r\n2050, 20d0, 2150, 21d0, 2250, 22d0, 2350, 23d0        16..23\r\n\r\nas expected for each 8 line interval on the hires screen.",
 "BoxMode":true,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"909":{
+"Text":"Charsets cover keys $20..$7f, so normally we align the effective char# to $00..$5f by subtracting $20 from the key. But if lowercase is enforced, we skip the adjustment for A-Z, as lowercase is uppercase+$20.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"920":{
+"Text":"A now contains the index into the charset for this key, $00..$5f. We multiply this by 8 (bytes/char) to get the byte offset. Finally we add this offset to the active charset address to get the char\u0027s bitmap pointer. The bit manipulation below is just an 8x8=16bit multiply (really a 3-bit left shift of 8 bits into 16) followed by a 16-bit add.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"1029":{
+"Text":"Move the cursor to the next row, without changing the column -- a linefeed. Wrap or scroll as needed if we reached the bottom.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"1025":{
+"Text":"Move cursor to beginning of line (CR) and then fall through to linefeed (LF).",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"944":{
+"Text":"charptr now points to the bitmap for this char.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"892":{
+"Text":"Draw char to hires screen and (invisibly) to text screen, scrolling or wrapping both as needed.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"970":{
+"Text":"Read a bitmap line, combine it with the source, and write it to the screen.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"1166":{
+"Text":"Load current H/V pos into Y/A and fall through to clear_eol.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"1170":{
+"Text":"Clear line from column Y, row A to end of that line.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"1116":{
+"Text":"Clear the last line to complete the scroll up.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"1101":{
+"Text":"Go to next hires line in 8-line group, at +$0400. By line 7 we will have added $1C00.",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"1064":{
+"Text":"\r\nOn the last iteration through the start_eol line loop drawing hires lines 0..7 of row N, bash is $3c, $3d, $3e or $3f for line 7, and we wind up here again for line 0 of row N+1. (bash is not incremented to line 8.) AND #$E3 makes that $20, $21, $22, or $23, effectively taking bash back to line 0. Since bash always points to the next line (the copy source), we can now store this in screen (dest), increasing it by one row. basl/h is then recomputed after adding 1 to the row.\r\n\r\nEquivalently, a mask of $e3 zeros the 3 bits 4, 3, and 2. Assume these are zeroed in the address corresponding to line 0, the first of 8 lines. Then, adding $0400 to this address (to reach the next hires line) sets bit 2, and adding $0400 7 times to reach line 7 will set bits 4, 3 and 2 (0b111 == 7). So AND #$E3 is the same as subtracting $04*7==$1C (0b00011100) from the high byte, returning the pointer to line 0.\r\n\r\n",
+"BoxMode":false,
+"MaxWidth":80,
+"BackgroundColor":0},
+
+"1058":{
+"Text":"Scroll hires window up one row, clearing the last row.",
+"BoxMode":false,
 "MaxWidth":80,
 "BackgroundColor":0}},
 
@@ -514,11 +683,11 @@
 "MaxWidth":80,
 "BackgroundColor":-7278960},
 
-"663":{
-"Text":"This appears to set Normal mode as a side effect but untested.",
+"892":{
+"Text":"Below, \"caps lock\" refers to the default state where uppercase and lowercase are printed without modification (we should call it \"unmodified\" state) -- it does not force everything to uppercase. \"lowercase mode\" prints both as lowercase. \"shift\" prints the first char as unmodified, then switches to lowercase mode.",
 "BoxMode":false,
 "MaxWidth":80,
-"BackgroundColor":-7278960}},
+"BackgroundColor":0}},
 
 "UserLabels":{
 "117":{
@@ -613,11 +782,11 @@
 "LabelAnno":"None"},
 
 "1029":{
-"Label":"CJ_nextline",
+"Label":"CJ_linefeed",
 "Value":37381,
 "Source":"User",
 "Type":"GlobalAddr",
-"LabelAnno":"Uncertain"},
+"LabelAnno":"None"},
 
 "585":{
 "Label":"CK_caps_lock",
@@ -778,7 +947,7 @@
 "Value":37244,
 "Source":"User",
 "Type":"GlobalAddr",
-"LabelAnno":"Uncertain"},
+"LabelAnno":"None"},
 
 "97":{
 "Label":"key_state",
@@ -1068,7 +1237,7 @@
 "LabelAnno":"None"},
 
 "1166":{
-"Label":"cr_pressed",
+"Label":"clear_hv_eol",
 "Value":37518,
 "Source":"User",
 "Type":"GlobalAddr",
@@ -1082,25 +1251,25 @@
 "LabelAnno":"None"},
 
 "1151":{
-"Label":"clear_lines",
+"Label":"clear_eowin",
 "Value":37503,
 "Source":"User",
 "Type":"GlobalAddr",
-"LabelAnno":"Uncertain"},
+"LabelAnno":"None"},
 
 "1147":{
-"Label":"clear_to_pos",
+"Label":"clear_hv_eowin",
 "Value":37499,
 "Source":"User",
 "Type":"GlobalAddr",
-"LabelAnno":"Uncertain"},
+"LabelAnno":"None"},
 
 "1170":{
-"Label":"clear_line",
+"Label":"clear_eol",
 "Value":37522,
 "Source":"User",
 "Type":"GlobalAddr",
-"LabelAnno":"Uncertain"},
+"LabelAnno":"None"},
 
 "1230":{
 "Label":"compute_base",
@@ -1170,7 +1339,154 @@
 "Value":37343,
 "Source":"User",
 "Type":"NonUniqueLocalAddr",
-"LabelAnno":"Uncertain"}},
+"LabelAnno":"None"},
+
+"770":{
+"Label":"vtab",
+"Value":37122,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"760":{
+"Label":"settop",
+"Value":37112,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"739":{
+"Label":"setleft",
+"Value":37091,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"917":{
+"Label":"unmodified",
+"Value":37269,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"909":{
+"Label":"lower",
+"Value":37261,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"920":{
+"Label":"draw",
+"Value":37272,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"997":{
+"Label":"store",
+"Value":37349,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"995":{
+"Label":"complement",
+"Value":37347,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"1017":{
+"Label":"chardone",
+"Value":37369,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"970":{
+"Label":"charline",
+"Value":37322,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"1057":{
+"Label":"return",
+"Value":37409,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"1025":{
+"Label":"cr_lf",
+"Value":37377,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"1054":{
+"Label":"reposition",
+"Value":37406,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"1050":{
+"Label":"wrap",
+"Value":37402,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"1058":{
+"Label":"scroll",
+"Value":37410,
+"Source":"User",
+"Type":"GlobalAddr",
+"LabelAnno":"None"},
+
+"1177":{
+"Label":"clrline",
+"Value":37529,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"1227":{
+"Label":"done",
+"Value":37579,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"1116":{
+"Label":"clear_last",
+"Value":37468,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"1091":{
+"Label":"copy_byte",
+"Value":37443,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"1064":{
+"Label":"next_row",
+"Value":37416,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"},
+
+"1088":{
+"Label":"start_eol",
+"Value":37440,
+"Source":"User",
+"Type":"NonUniqueLocalAddr",
+"LabelAnno":"None"}},
 
 "OperandFormats":{
 "7":{
@@ -1368,7 +1684,7 @@
 "Format":"NumericLE",
 "SubFormat":"Symbol",
 "SymbolRef":{
-"Label":"CJ_nextline",
+"Label":"CJ_linefeed",
 "Part":"Low"}},
 
 "351":{
@@ -1515,6 +1831,30 @@
 "Label":"builtin_charset",
 "Part":"High"}},
 
+"733":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Decimal",
+"SymbolRef":null},
+
+"737":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Decimal",
+"SymbolRef":null},
+
+"754":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Decimal",
+"SymbolRef":null},
+
+"758":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Decimal",
+"SymbolRef":null},
+
 "781":{
 "Length":2,
 "Format":"NumericLE",
@@ -1566,6 +1906,18 @@
 "SymbolRef":{
 "Label":"return1",
 "Part":"High"}},
+
+"909":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Ascii",
+"SymbolRef":null},
+
+"913":{
+"Length":2,
+"Format":"NumericLE",
+"SubFormat":"Ascii",
+"SymbolRef":null},
 
 "1248":{
 "Length":12,
@@ -2289,7 +2641,7 @@
 "SubFormat":"Hex",
 "SymbolRef":null},
 
-"Comment":"",
+"Comment":"screen address to read from",
 "HasWidth":true,
 "Direction":"ReadWrite",
 "MultiMask":null,
@@ -2306,11 +2658,30 @@
 "SubFormat":"Hex",
 "SymbolRef":null},
 
-"Comment":"",
+"Comment":"pointer to this char bitmap",
 "HasWidth":true,
 "Direction":"ReadWrite",
 "MultiMask":null,
-"Label":"charset",
+"Label":"charptr",
+"Value":238,
+"Source":"Variable",
+"Type":"ExternalAddr",
+"LabelAnno":"None"}],
+"ClearPrevious":false},
+
+"1166":{
+"Variables":[{
+"DataDescriptor":{
+"Length":1,
+"Format":"NumericLE",
+"SubFormat":"Hex",
+"SymbolRef":null},
+
+"Comment":"starting column",
+"HasWidth":true,
+"Direction":"ReadWrite",
+"MultiMask":null,
+"Label":"hpos",
 "Value":238,
 "Source":"Variable",
 "Type":"ExternalAddr",

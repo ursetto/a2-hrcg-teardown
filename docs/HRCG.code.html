@@ -185,7 +185,7 @@
 
 8ec1: c9 8d        @check_cr       cmp     #$8d              ;return pressed?
 8ec3: d0 05                        bne     @doneA
-8ec5: 20 8e 92                     jsr     <a href="#Symcr_pressed">cr_pressed</a>
+8ec5: 20 8e 92                     jsr     <a href="#Symclear_hv_eol">clear_hv_eol</a>
                    <span style="background-color: #cb9099">NOTE: Need to verify MON_CH is not updated. It's not clear it's absolutely</span>
                    <span style="background-color: #cb9099">necessary to restore Y based on the ROM. In particular, look at ESC-@ and cursor</span>
                    <span style="background-color: #cb9099">movement.</span>
@@ -213,12 +213,12 @@
 
 8eeb: c9 c5        <a name="Symnot_esc_null">not_esc_null</a>    cmp     #‘E’ | $80
 8eed: d0 06                        bne     <a href="#Symnot_esc_e">not_esc_e</a>
-8eef: 20 8e 92                     jsr     <a href="#Symcr_pressed">cr_pressed</a>
+8eef: 20 8e 92                     jsr     <a href="#Symclear_hv_eol">clear_hv_eol</a>
 8ef2: 4c c8 8e                     jmp     @doneY
 
 8ef5: c9 c6        <a name="Symnot_esc_e">not_esc_e</a>       cmp     #‘F’ | $80
 8ef7: d0 06                        bne     <a href="#Symnot_esc_f">not_esc_f</a>
-8ef9: 20 7b 92                     jsr     <a href="#Symclear_to_pos">clear_to_pos</a>?
+8ef9: 20 7b 92                     jsr     <a href="#Symclear_hv_eowin">clear_hv_eowin</a>
 8efc: 4c c8 8e                     jmp     @doneY
 
 8eff: c9 c3        <a name="Symnot_esc_f">not_esc_f</a>       cmp     #‘C’ | $80
@@ -234,7 +234,7 @@
 8f0e: c8                           iny
 8f0f: c4 23                        cpy     <a href="#SymMON_WNDBTM">MON_WNDBTM</a>
 8f11: 90 b5                        bcc     @doneY
-8f13: 20 22 92                     jsr     <a href="#SymL9222">L9222</a>
+8f13: 20 22 92                     jsr     <a href="#Symscroll">scroll</a>
 8f16: 4c c8 8e                     jmp     @doneY
 
                    saveY           .var    $35    {addr/1}   ;preserve Y
@@ -255,7 +255,7 @@
 8f2e: b0 57                        bcs     <a href="#Symctrl_a_arg">ctrl_a_arg</a>        ;so if carry set after ASL, key is arg to Ctrl-A
 8f30: c9 20                        cmp     #$20              ;control char 00..1f
 8f32: 90 03                        bcc     <a href="#Symcontrol_char">control_char</a>
-8f34: 4c 7c 91                     jmp     <a href="#Symdraw_char">draw_char</a>?        ;draw char to screen, probably
+8f34: 4c 7c 91                     jmp     <a href="#Symdraw_char">draw_char</a>         ;draw char to screen, probably
 
                    ; Control char 00..1f encountered in output string. Jump to corresponding
                    ; function in table if 00..1a (@-Z), or do nothing (?) if 1b..1f. Note Ctrl-@ is
@@ -286,7 +286,7 @@
 8f57: dc fb                        .dd2    <a href="#SymMON_BELL">MON_BELL</a>-1        ;^G -- sound bell
 8f59: 2b 90                        .dd2    <a href="#SymCH_backspace">CH_backspace</a>-1    ;^H move cursor left (no rubout)
 8f5b: 40 90                        .dd2    <a href="#SymCI_inverse_video">CI_inverse_video</a>-1
-8f5d: 04 92                        .dd2    <a href="#SymCJ_nextline">CJ_nextline</a>?-1
+8f5d: 04 92                        .dd2    <a href="#SymCJ_linefeed">CJ_linefeed</a>-1
 8f5f: 48 90                        .dd2    <a href="#SymCK_caps_lock">CK_caps_lock</a>-1
 8f61: 50 90                        .dd2    <a href="#SymCL_lower_case">CL_lower_case</a>-1
 8f63: 58 90                        .dd2    <a href="#SymCM_unknown">CM_unknown</a>?-1
@@ -368,7 +368,7 @@
 8fda: 85 24                        sta     <a href="#SymMON_CH">MON_CH</a>
 8fdc: f0 02                        beq     <a href="#SymL8FE0">L8FE0</a>
 8fde: b0 68                        bcs     <a href="#Symreturn">return</a>
-8fe0: 4c 05 92     <a name="SymL8FE0">L8FE0</a>           jmp     <a href="#SymCJ_nextline">CJ_nextline</a>?
+8fe0: 4c 05 92     <a name="SymL8FE0">L8FE0</a>           jmp     <a href="#SymCJ_linefeed">CJ_linefeed</a>
 
 8fe3: a9 c0        <a name="SymCOC_complement">COC_complement</a>  lda     #$c0
 8fe5: 8d 64 8e                     sta     <a href="#Symtransparent_mode">transparent_mode</a>
@@ -399,12 +399,12 @@
 901b: 60                           rts
 
 901c: b0 2a        <a name="SymCE_clear_eol">CE_clear_eol</a>    bcs     <a href="#Symreturn">return</a>
-901e: 20 8e 92                     jsr     <a href="#Symcr_pressed">cr_pressed</a>
+901e: 20 8e 92                     jsr     <a href="#Symclear_hv_eol">clear_hv_eol</a>
 9021: 4c 9c fc                     jmp     <a href="#SymMON_CLREOL">MON_CLREOL</a>        ;sync the text screen
 
                    ; Ctrl-F -- clear to end of page.
 9024: b0 22        <a name="SymCF_clear_eop">CF_clear_eop</a>    bcs     <a href="#Symreturn">return</a>
-9026: 20 7b 92                     jsr     <a href="#Symclear_to_pos">clear_to_pos</a>?
+9026: 20 7b 92                     jsr     <a href="#Symclear_hv_eowin">clear_hv_eowin</a>
 9029: 4c 42 fc                     jmp     <a href="#SymMON_CLREOP">MON_CLREOP</a>        ;sync the text screen
 
                    ; Move the cursor backward one space.
@@ -444,7 +444,7 @@
 906a: c0 83                        cpy     #$83
 906c: f0 03                        beq     <a href="#SymL9071">L9071</a>
 906e: 2c 10 c0                     bit     <a href="#SymKBDSTRB">KBDSTRB</a>
-9071: 4c 01 92     <a name="SymL9071">L9071</a>           jmp     <a href="#SymL9201">L9201</a>
+9071: 4c 01 92     <a name="SymL9071">L9071</a>           jmp     <a href="#Symcr_lf">cr_lf</a>
 
 9074: b0 d2        <a name="SymCN_normal_video">CN_normal_video</a> bcs     <a href="#Symreturn">return</a>            ;^O ^N -- unused
 9076: a9 00                        lda     #$00
@@ -466,9 +466,8 @@
 9091: 20 71 92                     jsr     <a href="#Symclear_home">clear_home</a>        ;plain ^P
 9094: 4c 58 fc                     jmp     <a href="#SymMON_HOME">MON_HOME</a>
 
-                   <span style="background-color: #72be72">NOTE: This appears to set Normal mode as a side effect but untested.</span>
-                   ; Set overwrite ("print") mode, the default mode, where character bg and fg
-                   ; completely replace underlying graphics.
+                   ; Set overwrite ("print") mode, the default mode, where character bg and fg both
+                   ; replace underlying graphics.
 9097: a9 00        <a name="SymCOP_print">COP_print</a>       lda     #$00
 9099: 8d 64 8e                     sta     <a href="#Symtransparent_mode">transparent_mode</a>
 909c: 8d 65 8e                     sta     <a href="#Symoverlay_mode">overlay_mode</a>
@@ -505,12 +504,12 @@
 90d6: 60                           rts
 
 90d7: b0 4c        <a name="SymCV_textwin_ul">CV_textwin_ul</a>   bcs     <a href="#Symreturn1">return1</a>           ;^O ^V -- unused
-90d9: a5 24                        lda     <a href="#SymMON_CH">MON_CH</a>
+90d9: a5 24                        lda     <a href="#SymMON_CH">MON_CH</a>            ;window-relative
 90db: 65 20                        adc     <a href="#SymMON_WNDLEFT">MON_WNDLEFT</a>
-90dd: c9 28                        cmp     #$28
-90df: 90 02                        bcc     <a href="#SymL90E3">L90E3</a>
-90e1: a9 27                        lda     #$27
-90e3: 85 20        <a name="SymL90E3">L90E3</a>           sta     <a href="#SymMON_WNDLEFT">MON_WNDLEFT</a>
+90dd: c9 28                        cmp     #40               ;Ensure left is &lt; 40
+90df: 90 02                        bcc     @setleft
+90e1: a9 27                        lda     #39
+90e3: 85 20        @setleft        sta     <a href="#SymMON_WNDLEFT">MON_WNDLEFT</a>
 90e5: 38                           sec
 90e6: a5 21                        lda     <a href="#SymMON_WNDWDTH">MON_WNDWDTH</a>
 90e8: e5 24                        sbc     <a href="#SymMON_CH">MON_CH</a>
@@ -518,14 +517,14 @@
 90ec: a9 00                        lda     #$00
 90ee: 85 24                        sta     <a href="#SymMON_CH">MON_CH</a>
 90f0: a5 25                        lda     <a href="#SymMON_CV">MON_CV</a>
-90f2: c9 18                        cmp     #$18
-90f4: 90 02                        bcc     <a href="#SymL90F8">L90F8</a>
-90f6: a9 17                        lda     #$17
-90f8: 85 22        <a name="SymL90F8">L90F8</a>           sta     <a href="#SymMON_WNDTOP">MON_WNDTOP</a>
+90f2: c9 18                        cmp     #24               ;Ensure top is &lt; 24
+90f4: 90 02                        bcc     @settop
+90f6: a9 17                        lda     #23
+90f8: 85 22        @settop         sta     <a href="#SymMON_WNDTOP">MON_WNDTOP</a>
 90fa: 2c 72 8e                     bit     <a href="#Symblock_mode">block_mode</a>
-90fd: 30 03                        bmi     <a href="#SymL9102">L9102</a>
-90ff: 8d 74 8e                     sta     <a href="#Symblock_cv">block_cv</a>
-9102: 4c 22 fc     <a name="SymL9102">L9102</a>           jmp     <a href="#SymMON_VTAB">MON_VTAB</a>
+90fd: 30 03                        bmi     @vtab
+90ff: 8d 74 8e                     sta     <a href="#Symblock_cv">block_cv</a>          ;update block top if block mode
+9102: 4c 22 fc     @vtab           jmp     <a href="#SymMON_VTAB">MON_VTAB</a>
 
 9105: b0 1f        <a name="SymCW_textwin_lr">CW_textwin_lr</a>   bcs     <a href="#SymCOW_wrap">COW_wrap</a>
 9107: a5 24                        lda     <a href="#SymMON_CH">MON_CH</a>
@@ -589,116 +588,155 @@
 
 9179: 4c 0c 8e     <a name="SymCOZ_userB">COZ_userB</a>       jmp     <a href="#SymuserB">userB</a>
 
-                   screen          .var    $ec    {addr/2}
-                   charset         .var    $ee    {addr/2}
+                   NOTE: Below, "caps lock" refers to the default state where uppercase and
+                   lowercase are printed without modification (we should call it "unmodified"
+                   state) -- it does not force everything to uppercase. "lowercase mode" prints
+                   both as lowercase. "shift" prints the first char as unmodified, then switches to
+                   lowercase mode.
+                   ; Draw char to hires screen and (invisibly) to text screen, scrolling or
+                   ; wrapping both as needed.
+                   screen          .var    $ec    {addr/2}   ;screen address to read from
+                   charptr         .var    $ee    {addr/2}   ;pointer to this char bitmap
 
-917c: 0e 61 8e     <a name="Symdraw_char">draw_char?</a>      asl     <a href="#Symkey_state">key_state</a>
-917f: b0 a4                        bcs     <a href="#Symreturn1">return1</a>
-9181: 2c 67 8e                     bit     <a href="#Symlower_case">lower_case</a>
-9184: 10 0f                        bpl     <a href="#SymL9195">L9195</a>
-9186: 50 05                        bvc     <a href="#SymL918D">L918D</a>
-9188: 0e 67 8e                     asl     <a href="#Symlower_case">lower_case</a>
-918b: b0 08                        bcs     <a href="#SymL9195">L9195</a>
-918d: c9 41        <a name="SymL918D">L918D</a>           cmp     #$41
-918f: 90 04                        bcc     <a href="#SymL9195">L9195</a>
-9191: c9 5b                        cmp     #$5b
-9193: 90 03                        bcc     <a href="#SymL9198">L9198</a>
-9195: 38           <a name="SymL9195">L9195</a>           sec
-9196: e9 20                        sbc     #$20
-9198: 0a           <a name="SymL9198">L9198</a>           asl     A
-9199: 26 ef                        rol     charset+1
-919b: 0a                           asl     A
-919c: 26 ef                        rol     charset+1
-919e: 0a                           asl     A
-919f: 26 ef                        rol     charset+1
+917c: 0e 61 8e     <a name="Symdraw_char">draw_char</a>       asl     <a href="#Symkey_state">key_state</a>         ;if waiting for arg to ^O,
+917f: b0 a4                        bcs     <a href="#Symreturn1">return1</a>           ;  cancel ^O and return
+9181: 2c 67 8e                     bit     <a href="#Symlower_case">lower_case</a>        ;enforced lowercase?
+9184: 10 0f                        bpl     @unmodified       ;no, unmodified char
+9186: 50 05                        bvc     @lower            ;lowercase, but shift disengaged
+9188: 0e 67 8e                     asl     <a href="#Symlower_case">lower_case</a>        ;shift engaged; mode $c0-&gt;$80 sets followup lowercase
+918b: b0 08                        bcs     @unmodified       ;always (unmodified initial char)
+                   ; Charsets cover keys $20..$7f, so normally we align the effective char# to
+                   ; $00..$5f by subtracting $20 from the key. But if lowercase is enforced, we
+                   ; skip the adjustment for A-Z, as lowercase is uppercase+$20.
+918d: c9 41        @lower          cmp     #‘A’
+918f: 90 04                        bcc     @unmodified       ;key &lt; A, do not lowercase
+9191: c9 5b                        cmp     #‘[’              ;'Z'+1
+9193: 90 03                        bcc     @draw             ;A-Z -- make it lowercase
+9195: 38           @unmodified     sec                       ;key is unmodified, so
+9196: e9 20                        sbc     #$20              ;align $20..$7f to $00..$5f
+                   ; A now contains the index into the charset for this key, $00..$5f. We multiply
+                   ; this by 8 (bytes/char) to get the byte offset. Finally we add this offset to
+                   ; the active charset address to get the char's bitmap pointer. The bit
+                   ; manipulation below is just an 8x8=16bit multiply (really a 3-bit left shift of
+                   ; 8 bits into 16) followed by a 16-bit add.
+9198: 0a           @draw           asl     A                 ;Multiply A by 2
+9199: 26 ef                        rol     charptr+1         ;shift the overflow into high byte
+919b: 0a                           asl     A                 ;by 4
+919c: 26 ef                        rol     charptr+1         ;shift again
+919e: 0a                           asl     A                 ;by 8
+919f: 26 ef                        rol     charptr+1         ;shift again
 91a1: 18                           clc
-91a2: 6d 68 8e                     adc     <a href="#Symactive_charset">active_charset</a>
-91a5: 85 ee                        sta     charset
-91a7: a5 ef                        lda     charset+1
-91a9: 29 07                        and     #$07
-91ab: 6d 69 8e                     adc     <a href="#Symactive_charset">active_charset</a>+1
-91ae: 85 ef                        sta     charset+1
-91b0: 20 cc 92                     jsr     <a href="#Symcompute_cur_base">compute_cur_base</a>
-91b3: 65 24                        adc     <a href="#SymMON_CH">MON_CH</a>
-91b5: 85 2a                        sta     basl
-91b7: 85 ec                        sta     screen
+91a2: 6d 68 8e                     adc     <a href="#Symactive_charset">active_charset</a>    ;16-bit add (low)
+91a5: 85 ee                        sta     charptr           ;char bitmap (low)
+91a7: a5 ef                        lda     charptr+1         ;get high byte from 8x8 multiply
+91a9: 29 07                        and     #$07              ;limit to the 3 shifted bits
+91ab: 6d 69 8e                     adc     <a href="#Symactive_charset">active_charset</a>+1  ;16-bit add (high)
+91ae: 85 ef                        sta     charptr+1         ;char bitmap (high)
+                   ; charptr now points to the bitmap for this char.
+91b0: 20 cc 92                     jsr     <a href="#Symcompute_cur_base">compute_cur_base</a>  ;get hires addr of first col of this row
+91b3: 65 24                        adc     <a href="#SymMON_CH">MON_CH</a>            ;A is basl, add column position
+91b5: 85 2a                        sta     basl              ;basl += col; dest addr to write to
+91b7: 85 ec                        sta     screen            ;&lt;screen = basl; source addr when combining
 91b9: a5 2b                        lda     bash
 91bb: 4d 65 8e                     eor     <a href="#Symoverlay_mode">overlay_mode</a>      ;eor $60 flips $20 to $40 and vice versa
-91be: 85 ed                        sta     screen+1
+91be: 85 ed                        sta     screen+1          ;&gt;screen = bash, adjusted for source hires page
 91c0: a4 24                        ldy     <a href="#SymMON_CH">MON_CH</a>
-91c2: a5 ff                        lda     saveA
-91c4: 91 28                        sta     (<a href="#SymMON_BASL">MON_BASL</a>),y
-91c6: a2 00                        ldx     #$00
-91c8: a0 00                        ldy     #$00
-91ca: b1 ee        <a name="SymL91CA">L91CA</a>           lda     (charset),y
-91cc: 4d 63 8e                     eor     <a href="#Syminverse_video">inverse_video</a>
-91cf: 2c 64 8e                     bit     <a href="#Symtransparent_mode">transparent_mode</a>
-91d2: 10 11                        bpl     <a href="#SymL91E5">L91E5</a>             ;if bit 7 clear
-91d4: 70 0d                        bvs     <a href="#SymL91E3">L91E3</a>             ;if bit 6 set
+91c2: a5 ff                        lda     saveA             ;recall original keypress value
+91c4: 91 28                        sta     (<a href="#SymMON_BASL">MON_BASL</a>),y      ;and store to text screen
+91c6: a2 00                        ldx     #$00              ;for (zp) indexing, X always 0
+91c8: a0 00                        ldy     #$00              ;line number in char
+                   ; Read a bitmap line, combine it with the source, and write it to the screen.
+91ca: b1 ee        @charline       lda     (charptr),y       ;load 7-pixel char line
+91cc: 4d 63 8e                     eor     <a href="#Syminverse_video">inverse_video</a>     ;flip all bits if inverted
+91cf: 2c 64 8e                     bit     <a href="#Symtransparent_mode">transparent_mode</a>  ;check overstrike method
+91d2: 10 11                        bpl     @store            ;if bit 7 clear, opaque
+91d4: 70 0d                        bvs     @complement       ;if bit 6 set
 91d6: 2c 63 8e                     bit     <a href="#Syminverse_video">inverse_video</a>     ;is inverse_video set ($7f)
-91d9: 70 04                        bvs     @invert?          ;yes, bit 6 set when $7f
-91db: 01 ec                        ora     (screen,x)
-91dd: 50 06                        bvc     <a href="#SymL91E5">L91E5</a>             ;always
+91d9: 70 04                        bvs     @invert           ;yes, bit 6 set when $7f
+91db: 01 ec                        ora     (screen,x)        ;combine (OR, blend) with source pixels
+91dd: 50 06                        bvc     @store            ;always
 
-91df: 21 ec        @invert?        and     (screen,x)
-91e1: 70 02                        bvs     <a href="#SymL91E5">L91E5</a>
+91df: 21 ec        @invert         and     (screen,x)        ;combine (AND) source with char mask
+91e1: 70 02                        bvs     @store
 
-91e3: 41 ec        <a name="SymL91E3">L91E3</a>           eor     (screen,x)
-91e5: 81 2a        <a name="SymL91E5">L91E5</a>           sta     (basl,x)
-91e7: c8                           iny
+91e3: 41 ec        @complement     eor     (screen,x)        ;flip (XOR) source with char mask (X=0)
+91e5: 81 2a        @store          sta     (basl,x)          ;update screen (X=0)
+91e7: c8                           iny                       ;next char line
 91e8: c0 08                        cpy     #$08
-91ea: b0 0d                        bcs     <a href="#SymL91F9">L91F9</a>
+91ea: b0 0d                        bcs     @chardone         ;wrote 8 lines, done
 91ec: a5 2b                        lda     bash
 91ee: 69 04                        adc     #$04              ;(carry is clear)
-91f0: 85 2b                        sta     bash
-91f2: 4d 65 8e                     eor     <a href="#Symoverlay_mode">overlay_mode</a>
-91f5: 85 ed                        sta     screen+1
-91f7: 90 d1                        bcc     <a href="#SymL91CA">L91CA</a>
-91f9: e6 24        <a name="SymL91F9">L91F9</a>           inc     <a href="#SymMON_CH">MON_CH</a>
+91f0: 85 2b                        sta     bash              ;next hires line is +$0400
+91f2: 4d 65 8e                     eor     <a href="#Symoverlay_mode">overlay_mode</a>      ;adjust source addr for overlay mode again
+91f5: 85 ed                        sta     screen+1          ;update source addr
+91f7: 90 d1                        bcc     @charline         ;always
+91f9: e6 24        @chardone       inc     <a href="#SymMON_CH">MON_CH</a>            ;update horiz pos
 91fb: a5 24                        lda     <a href="#SymMON_CH">MON_CH</a>
-91fd: c5 21                        cmp     <a href="#SymMON_WNDWDTH">MON_WNDWDTH</a>
-91ff: 90 20                        bcc     <a href="#SymL9221">L9221</a>
-9201: a9 00        <a name="SymL9201">L9201</a>           lda     #$00
+91fd: c5 21                        cmp     <a href="#SymMON_WNDWDTH">MON_WNDWDTH</a>       ;did we exceed window width?
+91ff: 90 20                        bcc     @return           ;no, we are done
+                   ; Move cursor to beginning of line (CR) and then fall through to linefeed (LF).
+9201: a9 00        <a name="Symcr_lf">cr_lf</a>           lda     #$00              ;reset col to beginning of line
 9203: 85 24                        sta     <a href="#SymMON_CH">MON_CH</a>
-9205: e6 25        <a name="SymCJ_nextline">CJ_nextline?</a>    inc     <a href="#SymMON_CV">MON_CV</a>
+                   ; Move the cursor to the next row, without changing the column -- a linefeed.
+                   ; Wrap or scroll as needed if we reached the bottom.
+9205: e6 25        <a name="SymCJ_linefeed">CJ_linefeed</a>     inc     <a href="#SymMON_CV">MON_CV</a>            ;go to next line
 9207: a5 25                        lda     <a href="#SymMON_CV">MON_CV</a>
-9209: c5 23                        cmp     <a href="#SymMON_WNDBTM">MON_WNDBTM</a>
-920b: 90 11                        bcc     <a href="#SymL921E">L921E</a>
-920d: 2c 66 8e                     bit     <a href="#Symwrap_mode">wrap_mode</a>
-9210: 70 08                        bvs     <a href="#SymL921A">L921A</a>
-9212: c6 25                        dec     <a href="#SymMON_CV">MON_CV</a>
-9214: 20 22 92                     jsr     <a href="#SymL9222">L9222</a>
-9217: 4c 70 fc                     jmp     <a href="#SymMON_SCROLL">MON_SCROLL</a>
+9209: c5 23                        cmp     <a href="#SymMON_WNDBTM">MON_WNDBTM</a>        ;check vertical pos
+920b: 90 11                        bcc     @reposition       ;still within window
+920d: 2c 66 8e                     bit     <a href="#Symwrap_mode">wrap_mode</a>         ;in wrap mode (bit 6)?
+9210: 70 08                        bvs     @wrap             ;yes; wrap to top
+9212: c6 25                        dec     <a href="#SymMON_CV">MON_CV</a>            ;scrolling; adjust pos to last line
+9214: 20 22 92                     jsr     <a href="#Symscroll">scroll</a>            ;scroll hires window
+9217: 4c 70 fc                     jmp     <a href="#SymMON_SCROLL">MON_SCROLL</a>        ;scroll text window and exit
 
-921a: a5 22        <a name="SymL921A">L921A</a>           lda     <a href="#SymMON_WNDTOP">MON_WNDTOP</a>
+921a: a5 22        @wrap           lda     <a href="#SymMON_WNDTOP">MON_WNDTOP</a>        ;set vert pos to top of window
 921c: 85 25                        sta     <a href="#SymMON_CV">MON_CV</a>
-921e: 20 24 fc     <a name="SymL921E">L921E</a>           jsr     <a href="#SymMON_VTABZ">MON_VTABZ</a>
-9221: 60           <a name="SymL9221">L9221</a>           rts
+921e: 20 24 fc     @reposition     jsr     <a href="#SymMON_VTABZ">MON_VTABZ</a>         ;reposition text mode cursor
+9221: 60           @return         rts
 
-9222: a5 22        <a name="SymL9222">L9222</a>           lda     <a href="#SymMON_WNDTOP">MON_WNDTOP</a>
-9224: 48                           pha
+                   ; Scroll hires window up one row, clearing the last row.
+9222: a5 22        <a name="Symscroll">scroll</a>          lda     <a href="#SymMON_WNDTOP">MON_WNDTOP</a>
+9224: 48                           pha                       ;save row number
 9225: 20 ce 92                     jsr     <a href="#Symcompute_base">compute_base</a>
-9228: a5 2a        <a name="SymL9228">L9228</a>           lda     basl
+                   ; 
+                   ; On the last iteration through the start_eol line loop drawing hires lines 0..7
+                   ; of row N, bash is $3c, $3d, $3e or $3f for line 7, and we wind up here again
+                   ; for line 0 of row N+1. (bash is not incremented to line 8.) AND #$E3 makes
+                   ; that $20, $21, $22, or $23, effectively taking bash back to line 0. Since bash
+                   ; always points to the next line (the copy source), we can now store this in
+                   ; screen (dest), increasing it by one row. basl/h is then recomputed after
+                   ; adding 1 to the row.
+                   ; 
+                   ; Equivalently, a mask of $e3 zeros the 3 bits 4, 3, and 2. Assume these are
+                   ; zeroed in the address corresponding to line 0, the first of 8 lines. Then,
+                   ; adding $0400 to this address (to reach the next hires line) sets bit 2, and
+                   ; adding $0400 7 times to reach line 7 will set bits 4, 3 and 2 (0b111 == 7). So
+                   ; AND #$E3 is the same as subtracting $04*7==$1C (0b00011100) from the high
+                   ; byte, returning the pointer to line 0.
+                   ; 
+9228: a5 2a        @next_row       lda     basl
 922a: 85 ec                        sta     screen
 922c: a5 2b                        lda     bash
-922e: 29 e3                        and     #$e3
-9230: 85 ed                        sta     screen+1
-9232: 68                           pla
+922e: 29 e3                        and     #$e3              ;return bash line 7 to line 0
+9230: 85 ed                        sta     screen+1          ;inc dest line by 8 (row by 1)
+9232: 68                           pla                       ;restore row number
 9233: 18                           clc
-9234: 69 01                        adc     #$01
-9236: c5 23                        cmp     <a href="#SymMON_WNDBTM">MON_WNDBTM</a>
-9238: b0 22                        bcs     <a href="#SymL925C">L925C</a>
-923a: 48                           pha
-923b: 20 ce 92                     jsr     <a href="#Symcompute_base">compute_base</a>
-923e: a2 07                        ldx     #$07
-9240: a4 21        <a name="SymL9240">L9240</a>           ldy     <a href="#SymMON_WNDWDTH">MON_WNDWDTH</a>
+9234: 69 01                        adc     #$01              ;inc row
+9236: c5 23                        cmp     <a href="#SymMON_WNDBTM">MON_WNDBTM</a>        ;did we hit bottom?
+9238: b0 22                        bcs     @clear_last       ;yes, finish up
+923a: 48                           pha                       ;save row number (for next loop, above)
+923b: 20 ce 92                     jsr     <a href="#Symcompute_base">compute_base</a>      ;set basl/bash for next line
+923e: a2 07                        ldx     #$07              ;8 rows, char height
+9240: a4 21        @start_eol      ldy     <a href="#SymMON_WNDWDTH">MON_WNDWDTH</a>       ;start at end of window line
 9242: 88                           dey
-9243: b1 2a        <a name="SymL9243">L9243</a>           lda     (basl),y
+9243: b1 2a        @copy_byte      lda     (basl),y          ;copy byte
 9245: 91 ec                        sta     (screen),y
-9247: 88                           dey
-9248: 10 f9                        bpl     <a href="#SymL9243">L9243</a>
-924a: ca                           dex
-924b: 30 db                        bmi     <a href="#SymL9228">L9228</a>
+9247: 88                           dey                       ;and move from right to left
+9248: 10 f9                        bpl     @copy_byte        ;until beginning of line
+924a: ca                           dex                       ;copied all 8 lines?
+924b: 30 db                        bmi     @next_row         ;yes, next row (basl/h not inc'd)
+                   ; Go to next hires line in 8-line group, at +$0400. By line 7 we will have added
+                   ; $1C00.
 924d: 18                           clc
 924e: a5 2b                        lda     bash
 9250: 69 04                        adc     #$04
@@ -706,14 +744,15 @@
 9254: a5 ed                        lda     screen+1
 9256: 69 04                        adc     #$04
 9258: 85 ed                        sta     screen+1
-925a: d0 e4                        bne     <a href="#SymL9240">L9240</a>
-925c: ad 64 8e     <a name="SymL925C">L925C</a>           lda     <a href="#Symtransparent_mode">transparent_mode</a>
+925a: d0 e4                        bne     @start_eol        ;start next row
+                   ; Clear the last line to complete the scroll up.
+925c: ad 64 8e     @clear_last     lda     <a href="#Symtransparent_mode">transparent_mode</a>
 925f: 48                           pha
 9260: a5 23                        lda     <a href="#SymMON_WNDBTM">MON_WNDBTM</a>
 9262: e9 01                        sbc     #$01
 9264: a0 00                        ldy     #$00
 9266: 8c 64 8e                     sty     <a href="#Symtransparent_mode">transparent_mode</a>
-9269: 20 92 92                     jsr     <a href="#Symclear_line">clear_line</a>?
+9269: 20 92 92                     jsr     <a href="#Symclear_eol">clear_eol</a>
 926c: 68                           pla
 926d: 8d 64 8e                     sta     <a href="#Symtransparent_mode">transparent_mode</a>
 9270: 60                           rts
@@ -722,31 +761,35 @@
 9273: 85 25                        sta     <a href="#SymMON_CV">MON_CV</a>
 9275: a0 00                        ldy     #$00
 9277: 84 24                        sty     <a href="#SymMON_CH">MON_CH</a>
-9279: f0 04                        beq     <a href="#Symclear_lines">clear_lines</a>?      ;always
+9279: f0 04                        beq     <a href="#Symclear_eowin">clear_eowin</a>       ;always
 
-927b: a4 24        <a name="Symclear_to_pos">clear_to_pos?</a>   ldy     <a href="#SymMON_CH">MON_CH</a>
+927b: a4 24        <a name="Symclear_hv_eowin">clear_hv_eowin</a>  ldy     <a href="#SymMON_CH">MON_CH</a>
 927d: a5 25                        lda     <a href="#SymMON_CV">MON_CV</a>
                    ; On entry, A/Y are the row/col to begin clearing from. Clears from this
                    ; position to bottom of window.
-927f: 48           <a name="Symclear_lines">clear_lines?</a>    pha                       ;preserve line #
-9280: 20 92 92                     jsr     <a href="#Symclear_line">clear_line</a>?
+927f: 48           <a name="Symclear_eowin">clear_eowin</a>     pha                       ;preserve line #
+9280: 20 92 92                     jsr     <a href="#Symclear_eol">clear_eol</a>
 9283: 68                           pla
 9284: 18                           clc
 9285: 69 01                        adc     #$01              ;next line
 9287: c5 23                        cmp     <a href="#SymMON_WNDBTM">MON_WNDBTM</a>        ;until end of window
 9289: a0 00                        ldy     #$00              ;start at col 0
-928b: 90 f2                        bcc     <a href="#Symclear_lines">clear_lines</a>?
+928b: 90 f2                        bcc     <a href="#Symclear_eowin">clear_eowin</a>
 928d: 60                           rts
 
-928e: a4 24        <a name="Symcr_pressed">cr_pressed</a>      ldy     <a href="#SymMON_CH">MON_CH</a>
+                   ; Load current H/V pos into Y/A and fall through to clear_eol.
+                   hpos            .var    $ee    {addr/1}   ;starting column
+
+928e: a4 24        <a name="Symclear_hv_eol">clear_hv_eol</a>    ldy     <a href="#SymMON_CH">MON_CH</a>
 9290: a5 25                        lda     <a href="#SymMON_CV">MON_CV</a>
-9292: 84 ee        <a name="Symclear_line">clear_line?</a>     sty     charset
+                   ; Clear line from column Y, row A to end of that line.
+9292: 84 ee        <a name="Symclear_eol">clear_eol</a>       sty     hpos              ;save starting column
 9294: 20 ce 92                     jsr     <a href="#Symcompute_base">compute_base</a>
-9297: a2 07                        ldx     #$07
+9297: a2 07                        ldx     #$07              ;clear 8 hires lines
                    ; If transparent mode is disabled, we just want to clear by writing 7 black
                    ; (normal, $00)  or white (inverse, $7f) pixels. This conveniently corresponds
                    ; to the value of inverse_video.  
-9299: ad 63 8e     <a name="SymL9299">L9299</a>           lda     <a href="#Syminverse_video">inverse_video</a>     ;load $7f or $00 for opaque mode
+9299: ad 63 8e     @clrline        lda     <a href="#Syminverse_video">inverse_video</a>     ;load $7f or $00 for opaque mode
 929c: 2c 64 8e                     bit     <a href="#Symtransparent_mode">transparent_mode</a>
 929f: 10 15                        bpl     @store            ;if opaque, skip to storing
 92a1: a5 2a                        lda     basl
@@ -760,21 +803,22 @@
 92b3: 4d 63 8e                     eor     <a href="#Syminverse_video">inverse_video</a>
 92b6: 91 2a        @store          sta     (basl),y
 92b8: c8                           iny
-92b9: c4 21                        cpy     <a href="#SymMON_WNDWDTH">MON_WNDWDTH</a>
-92bb: 90 dc                        bcc     <a href="#SymL9299">L9299</a>
-92bd: ca                           dex
-92be: 30 0b                        bmi     <a href="#SymL92CB">L92CB</a>
-92c0: a4 ee                        ldy     charset
+92b9: c4 21                        cpy     <a href="#SymMON_WNDWDTH">MON_WNDWDTH</a>       ;end of screen?
+92bb: 90 dc                        bcc     @clrline          ;nope, keep clearing line
+92bd: ca                           dex                       ;one line complete
+92be: 30 0b                        bmi     @done             ;if all lines complete, done
+92c0: a4 ee                        ldy     hpos              ;restore starting column
 92c2: a5 2b                        lda     bash
 92c4: 18                           clc
-92c5: 69 04                        adc     #$04
-92c7: 85 2b                        sta     bash
-92c9: d0 ce                        bne     <a href="#SymL9299">L9299</a>
-92cb: 60           <a name="SymL92CB">L92CB</a>           rts
+92c5: 69 04                        adc     #$04              ;hi byte adds $04 per line
+92c7: 85 2b                        sta     bash              ;update hi byte of screen address
+92c9: d0 ce                        bne     @clrline          ;next line -- always
+92cb: 60           @done           rts
 
                    ********************************************************************************
                    * Compute hires base address of a text line, the first line of every 8 line    *
-                   * character; i.e. 0, 8, 16, ...                                                *
+                   * character; i.e. 0, 8, 16, ... The line# is the current text row. On exit,    *
+                   * basl/bash has the address, and A has a copy of basl.                         *
                    *                                                                              *
                    * The high byte is the same for even/odd pairs, so we divide the row by 2;     *
                    * then take this modulo 4 and OR in the hires page.                            *
@@ -809,7 +853,7 @@
 92df: 60                           rts
 
 92e0: 00 00 00 00+ <a name="Symhires_addr_tbl">hires_addr_tbl</a>  .bulk   0000000050505050a0a0a0a0 ;12 bytes (24 lines)
-92ec: b9 a2 a0 d2+                 .align  $0100 (20 bytes)  ;more speculation
+92ec: b9 a2 a0 d2+                 .align  $0100 (20 bytes)  ;unused area
 
                    ; Standard monochrome (1bpp) 7x8 font bitmap, 1 byte per character line, 8
                    ; consecutive bytes (lines) per character. High bit is unused. Covers 96 high
@@ -926,7 +970,7 @@
     <div id="footer">
         <hr/>
         <p>HTML generated by <a href="https://6502bench.com/">6502bench SourceGen</a> v1.7.3
-        on 2021/02/06 <!--01:05:56 -06:00--></p>
+        on 2021/02/07 <!--23:56:26 -06:00--></p>
         <p>Expression style: Common</p>
         <!-- parameters: cols=16,8,18,100;extraCols=Address,Bytes;byteSpc=True;commaBulk=False;nonuPfx='@';varPfx='';labelBrk=False;notes=True;gfx=True;opWrap=64 -->
     </div>
